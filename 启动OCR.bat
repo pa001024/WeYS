@@ -1,1 +1,0 @@
-python httpocr.py

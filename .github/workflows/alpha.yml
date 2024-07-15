@@ -3,7 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
+      - develop
       - 'feat/*'
     paths-ignore:
       - '.gitattributes'
@@ -14,7 +15,7 @@ on:
       - 'LICENSE'
   pull_request:
     branches:
-      - master
+      - develop
     paths-ignore:
       - '.gitattributes'
       - '.github/**'
@@ -22,8 +23,6 @@ on:
       - '.gitmodules'
       - '**.md'
       - 'LICENSE'
-      - '**.yml'
-      - '**.resx'
 
 jobs:
   build:
@@ -37,10 +36,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js 18.x
+      - name: Use Node.js 20
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 20
 
       - name: Build
         run: |
@@ -52,7 +51,7 @@ jobs:
         if: success() && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: WeYS Alpha
+          name: WeYS-Alpha-${{ github.sha }}
           path: ${{ github.workspace }}/target/release/weys-app.exe
 
       - name: Add summary

@@ -1,7 +1,7 @@
 {
   "name": "we-ys",
   "version": "0.0.1",
-  "description": "AutoHotkey support for Visual Studio Code",
+  "description": "",
   "workspaces": [
     "./app",
     "./server",
