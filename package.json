@@ -1,0 +1,17 @@
+{
+  "name": "we-ys",
+  "version": "0.0.1",
+  "description": "AutoHotkey support for Visual Studio Code",
+  "workspaces": [
+    "./app",
+    "./server",
+    "./externals/*"
+  ],
+  "scripts": {
+    "build": "npm run build:app && npm run build:server",
+    "build:app": "cd app && npm run build",
+    "build:server": "cd server && npm run build",
+    "dev:app": "cd app && npm run dev",
+    "dev:server": "cd server && npm run dev"
+  }
+}

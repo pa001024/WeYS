@@ -1,0 +1,44 @@
+{
+    "build": {
+        "beforeDevCommand": "npm run vite",
+        "beforeBuildCommand": "npm run build",
+        "frontendDist": "../dist",
+        "devUrl": "http://localhost:1420"
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+    },
+    "productName": "weys",
+    "version": "1.0.0",
+    "identifier": "com.weys.app",
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxRjA3MjY5QTU2OTI2OEQKUldTTkptbWxhWEx3c1hpZ3hVQlVjVVlIN3QzVEQxblliVHE1aHNXNU1SOXB6TnljMXJJTEpOYm0K",
+            "endpoints": ["https://gitee.com/pa001024/WeYS/releases/latest/download/latest.json"],
+            "windows": {
+                "installMode": "passive"
+            }
+        }
+    },
+    "app": {
+        "withGlobalTauri": true,
+        "security": {
+            "csp": null
+        },
+        "windows": [
+            {
+                "title": "WeYS",
+                "fullscreen": false,
+                "resizable": true,
+                "decorations": false,
+                "width": 800,
+                "height": 600,
+                "transparent": true,
+                "minWidth": 330,
+                "minHeight": 430
+            }
+        ]
+    }
+}

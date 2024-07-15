@@ -1,0 +1,18 @@
+[package]
+name = "legend-cooker"
+version = "2.0.1"
+edition = "2021"
+build = "src/build.rs"
+
+[dependencies]
+console = "0.15"
+indicatif = "0.17"
+chrono = "0.4"
+lib = { path = "../lib" }
+
+[build-dependencies]
+winres = "0.1"
+embed-manifest = "1"
+
+[profile.release]
+panic = 'abort'

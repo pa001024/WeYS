@@ -1,0 +1,51 @@
+{
+  "name": "server",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts",
+    "sv": "bun run src/index.ts",
+    "build": "cd ../app && vite build --outDir ../server/dist --emptyOutDir",
+    "gen": "drizzle-kit generate --schema ./src/db/schema.ts --dialect sqlite && bun migrate",
+    "migrate": "bun run src/db/migrate.ts"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.0.4",
+    "@elysiajs/graphql-yoga": "^1.0.3",
+    "@elysiajs/static": "^1.0.3",
+    "@elysiajs/stream": "^1.0.3",
+    "@envelop/graphql-jit": "^8.0.3",
+    "@graphql-yoga/node": "^3.9.1",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "bcrypt": "^5.1.1",
+    "drizzle-graphql": "^0.8.4",
+    "drizzle-orm": "^0.31.4",
+    "elysia": "latest",
+    "graphql": "^16.9.0",
+    "graphql-mobius": "file:../externals/graphql-mobius",
+    "graphql-tag": "^2.12.6",
+    "graphql-ws": "^5.16.0",
+    "graphql-yoga": "^5.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^5.0.7",
+    "node-machine-id": "^1.1.12",
+    "rxjs": "^7.8.1",
+    "vite": "^5.3.3",
+    "vue": "^3.4.31"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.6",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.22.8",
+    "radix-vue": "^1.9.1"
+  },
+  "module": "src/index.js",
+  "type": "module",
+  "peerDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "overrides": {
+    "graphql-mobius": "file:../externals/graphql-mobius"
+  }
+}

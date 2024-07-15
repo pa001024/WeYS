@@ -1,0 +1,70 @@
+name: Alpha Build
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - 'feat/*'
+    paths-ignore:
+      - '.gitattributes'
+      - '.github/**'
+      - '.gitignore'
+      - '.gitmodules'
+      - '**.md'
+      - 'LICENSE'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '.gitattributes'
+      - '.github/**'
+      - '.gitignore'
+      - '.gitmodules'
+      - '**.md'
+      - 'LICENSE'
+      - '**.yml'
+      - '**.resx'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    # strategy:
+    #   matrix:
+    #     node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Build
+        run: |
+          cd app
+          npm install
+          npm run tb
+
+      - name: Upload artifact
+        if: success() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: WeYS Alpha
+          path: ${{ github.workspace }}/target/release/weys-app.exe
+
+      - name: Add summary
+        if: success() && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          $summary = "
+          > [!WARNING]
+          > 该版本是由 CI 程序自动打包生成的 `Alpha` 测试版本，**仅供开发者测试使用**
+
+          > [!TIP]
+          > 普通用户请 [点击这里](https://github.com/pa001024/WeYS/releases/latest/) 下载最新的稳定版本
+          "
+
+          echo $summary >> $Env:GITHUB_STEP_SUMMARY
