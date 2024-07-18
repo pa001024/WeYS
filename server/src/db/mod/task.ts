@@ -131,9 +131,7 @@ export const resolvers = {
                                 with: { user: true },
                                 where: eq(schema.tasks.id, res.id),
                             })
-                            if (task?.endTime) {
-                                return task
-                            }
+                            return task
                         }
                     }
                 }
