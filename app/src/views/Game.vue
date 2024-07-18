@@ -197,7 +197,7 @@ function copyUID(uid?: string) {
                             <span class="label-text">{{ $t("game.autoLogin") }}</span>
                         </label>
                         <div v-if="game.autoLoginEnable" class="flex flex-1 items-center space-x-2">
-                            <span class="text-sm">{{ $t('game.autoSend') }}</span>
+                            <span class="text-sm">{{ $t("game.autoSend") }}</span>
                             <Select v-model="game.autoLoginRoom">
                                 <SelectItem value="-">{{ $t("game.autoLoginRoom") }}</SelectItem>
                                 <GQQuery query="query { rooms { id, name } }" :variables="{}" v-slot="{ data }">
@@ -242,8 +242,9 @@ function copyUID(uid?: string) {
         </div>
         <div class="bg-base-100 p-4 w-full justify-items-center rounded-lg flex-1 flex flex-col overflow-hidden">
             <ScrollArea class="overflow-hidden flex-1" @loadref="(r) => (scrollRef = r)">
-                <div class="label cursor-pointer space-x-2 group h-9" v-for="acc in game.accounts" :key="acc.id">
+                <div class="label cursor-pointer space-x-2 group h-9" v-for="(acc, index) in game.accounts" :key="acc.id">
                     <label class="label space-x-2 p-0">
+                        <span class="label-text min-w-6">{{ index + 1 }}.</span>
                         <input
                             type="radio"
                             name="radio-10"
