@@ -48,11 +48,6 @@ function scrollToCenter(id: number = game.selected) {
     viewNode.children[game.accounts!.findIndex((acc) => acc.id === id)].scrollIntoView({ behavior: "smooth", block: "center" })
 }
 
-async function switchAccount(id: number) {
-    game.selected = id
-    await game.switchAccount(id)
-}
-
 async function importAccounts() {
     const select_json = () =>
         new Promise((resolve) => {
@@ -290,7 +285,11 @@ function copyUID(uid?: string) {
                             </div>
                         </Tooltip>
                         <Tooltip :tooltip="$t('game.deleteTooltip')" side="top">
-                            <div class="btn btn-sm join-item" @click.stop="game.deleteAccount(acc.id)" @contextmenu.prevent="game.deleteReg(acc.id)">
+                            <div
+                                class="btn btn-sm join-item"
+                                @click.stop="game.deleteAccount(acc.id)"
+                                @contextmenu.prevent="game.deleteReg(acc.id)"
+                            >
                                 <Icon icon="la:trash-alt" />
                             </div>
                         </Tooltip>
@@ -301,7 +300,7 @@ function copyUID(uid?: string) {
                             </div>
                         </Tooltip>
                         <Tooltip :tooltip="$t('game.switchTooltip')" side="top">
-                            <div class="btn btn-sm join-item" @click.stop="switchAccount(acc.id)">
+                            <div class="btn btn-sm join-item" @click.stop="game.switchAccount(acc.id)">
                                 <Icon icon="la:exchange-alt-solid" />
                             </div>
                         </Tooltip>

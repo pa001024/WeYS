@@ -95,19 +95,6 @@ export const resolvers = {
                 })
                 if (task) {
                     pubsub.publish("newTask", roomId, { newTask: task })
-                    if (task.maxAge) {
-                        setTimeout(async () => {
-                            const taskNeedEnd = await db.query.tasks.findFirst({
-                                with: { user: true },
-                                where: eq(schema.tasks.id, res.id),
-                            })
-                            if (taskNeedEnd && !taskNeedEnd.endTime) {
-                                taskNeedEnd.endTime = now()
-                                await db.update(schema.tasks).set({ endTime: taskNeedEnd.endTime }).where(eq(schema.tasks.id, taskNeedEnd.id))
-                                pubsub.publish("updateTask", roomId, { updateTask: taskNeedEnd })
-                            }
-                        }, task.maxAge * 1000)
-                    }
                     return task
                 }
             }
@@ -144,7 +131,21 @@ export const resolvers = {
                                 with: { user: true },
                                 where: eq(schema.tasks.id, res.id),
                             })
-                            return task
+                            if (task) {
+                                if (task.maxAge)
+                                    setTimeout(async () => {
+                                        const taskNeedEnd = await db.query.tasks.findFirst({
+                                            with: { user: true },
+                                            where: eq(schema.tasks.id, res.id),
+                                        })
+                                        if (taskNeedEnd && !taskNeedEnd.endTime) {
+                                            taskNeedEnd.endTime = now()
+                                            await db.update(schema.tasks).set({ endTime: taskNeedEnd.endTime }).where(eq(schema.tasks.id, taskNeedEnd.id))
+                                            pubsub.publish("updateTask", roomId, { updateTask: taskNeedEnd })
+                                        }
+                                    }, task.maxAge * 1000)
+                                return task
+                            }
                         }
                     }
                 }

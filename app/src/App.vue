@@ -140,6 +140,12 @@ provideClient(gqClient)
             requestAnimationFrame(drawLoop)
         })
     })
+
+if (env.isApp) {
+    const font = new FontFace("SourceHanSansCN", "url(/fonts/SourceHanSansCN-VF.ttf)")
+    document.fonts.add(font)
+    font.load()
+}
 </script>
 
 <template>

@@ -178,13 +178,13 @@ pub fn launch_game<R: Runtime>(
                     let ctl = GameControl::new(hwnd);
                     // 适龄提示
                     println!("自动登录");
-                    if !ctl.WaitColor(1510, 70, "1.9.D.|0.4.6.", 30.) {
+                    if !ctl.WaitColor(1510, 70, "1.[89].[CD].|0.4.6.", 30.) {
                         println!("登录超时");
                         let _ = app.emit("game_login", LoginPayload { success: false });
                         return;
                     }
                     println!("登录开始");
-                    if !ctl.CheckColor(1510, 70, "1.9.D.") {
+                    if !ctl.CheckColor(1510, 70, "1.[89].[CD].") {
                         println!("需输入密码");
                         ctl.focus();
                         ctl.Sleep(100);
