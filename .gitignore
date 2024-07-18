@@ -16,3 +16,4 @@ server/.env
 *.ipynb
 *.pyc
 app/src/env.ts
+bun.lockb
