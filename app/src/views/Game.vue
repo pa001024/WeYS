@@ -5,6 +5,7 @@ import { useTranslation } from "i18next-vue"
 import { CollapsibleContent, CollapsibleRoot, CollapsibleTrigger } from "radix-vue"
 import gsap from "gsap"
 import { FunctionDirective, ref, watchEffect, nextTick, onMounted } from "vue"
+import { env } from "../env"
 
 const game = useGameStore()
 const { t } = useTranslation()
@@ -119,8 +120,10 @@ const vFocus: FunctionDirective = (el) => {
 }
 onMounted(async () => {
     await nextTick()
-    await game.checkCurrentAccount()
-    await game.addAccountReg()
+    if (env.isApp) {
+        await game.checkCurrentAccount()
+        await game.addAccountReg(true)
+    }
 })
 function copyUID(uid?: string) {
     if (uid) navigator.clipboard.writeText(uid)
