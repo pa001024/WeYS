@@ -214,8 +214,9 @@ export const useGameStore = defineStore("game", {
 
         async addAccountReg() {
             const token = await getRegsk()
+            if (!token) return
             const iid = { hash: hash(token), token }
-            const old = (await db.gameAccounts.get(this.selected)) || (await db.gameAccounts.where("hash").equals(iid.hash).first())
+            const old = await db.gameAccounts.get(this.selected)
             const acc = await this.createAccountReg({ ...old, ...iid })
             if (old) {
                 console.log("update account", acc)
