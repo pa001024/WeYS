@@ -171,7 +171,7 @@ export const resolvers = {
                 where: eq(schema.tasks.id, taskId),
             })
             if (!task) return false
-            if (task.userList.includes(user.id) || task.endTime) {
+            if (task.endTime) {
                 return false
             }
             task.startTime = task.startTime || now()
