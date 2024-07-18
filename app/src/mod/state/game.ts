@@ -5,12 +5,12 @@ import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
 import * as event from "@tauri-apps/api/event"
 import { SHA1, enc } from "crypto-js"
 import { env } from "../../env"
-import { getGame, getRegsk, getUid, launchGame, setRegsk, setUsd } from "../api/game"
+import { autoOpen, getGame, getRegsk, getUid, launchGame, setRegsk, setUsd } from "../api/game"
 import { db, GameAccount } from "../db"
 import { useObservable } from "@vueuse/rxjs"
 import { liveQuery } from "dexie"
 import { t } from "i18next"
-import { addTaskAsyncMutation } from "../api/mutation"
+import { addTaskAsyncMutation, sendMessageMutation } from "../api/mutation"
 
 function hash(s: string) {
     return enc.Hex.stringify(SHA1(s))
@@ -268,6 +268,7 @@ export const useGameStore = defineStore("game", {
                         : this.pathParams,
                     false,
                     this.autoLoginEnable,
+                    this.autoLoginRoom !== "-",
                     account?.login,
                     account?.pwd
                 )
@@ -283,12 +284,19 @@ export const useGameStore = defineStore("game", {
                                     roomId: this.autoLoginRoom,
                                     name: uid,
                                     maxUser: 3,
-                                    maxAge: 30,
+                                    maxAge: 5,
                                     desc: "软饭",
                                 })
+                                await autoOpen()
+                                await new Promise((resolve) => setTimeout(resolve, 500))
                                 console.log("taskEnded", taskEnded)
                                 if (this.selectNext()) {
                                     this.launchGame()
+                                } else {
+                                    await sendMessageMutation({
+                                        roomId: this.autoLoginRoom,
+                                        content: "饭发完了",
+                                    })
                                 }
                             }
                         }

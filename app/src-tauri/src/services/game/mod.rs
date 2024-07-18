@@ -20,6 +20,23 @@ struct LoginPayload {
 }
 
 #[tauri::command]
+async fn auto_open() -> bool {
+    let pid = get_process_by_name(GAME_PROCESS).unwrap_or(0);
+    let interval = Duration::from_millis(100);
+    if let Some(hwnd) = get_window_by_process(pid) {
+        let ctl = GameControl::new(hwnd);
+        ctl.focus();
+        tokio::time::sleep(interval).await;
+        ctl.Click(469, 840); // 世界权限
+        tokio::time::sleep(interval).await;
+        ctl.Click(485, 735); // 直接加入
+        true
+    } else {
+        false
+    }
+}
+
+#[tauri::command]
 async fn auto_join(uid: String) -> bool {
     let pid = get_process_by_name(GAME_PROCESS).unwrap_or(0);
     let mut elapsed = Duration::from_secs(0);
@@ -99,6 +116,7 @@ pub fn launch_game<R: Runtime>(
     cmds: &str,
     unlock: bool,
     autologin: bool,
+    autosend: bool,
     login: String,
     pwd: String,
 ) -> bool {
@@ -202,9 +220,12 @@ pub fn launch_game<R: Runtime>(
                                 println!("设置权限");
                                 ctl.Click(469, 840); // 世界权限
                                 ctl.Sleep(100);
-                                ctl.Click(485, 735); // 直接加入
-                                                     // ctl.Click(473, 785); // 确认后可加入
-                                                     // ctl.Click(457, 686); // 无法加入
+                                if autosend {
+                                    ctl.Click(457, 686); // 无法加入
+                                                         // ctl.Click(473, 785); // 确认后可加入
+                                } else {
+                                    ctl.Click(485, 735); // 直接加入
+                                }
                                 ctl.Sleep(100);
                                 ctl.Click(469, 840); // 世界权限
                                 println!("登录结束");
@@ -405,6 +426,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             get_game,
             kill_game,
             auto_join,
+            auto_open,
             launch_game
         ])
         .build()

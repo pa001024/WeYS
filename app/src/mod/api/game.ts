@@ -12,8 +12,8 @@ export async function getGame(isRun: boolean) {
 export async function killGame() {
     return (await invoke("plugin:game|kill_game")) as boolean
 }
-export async function launchGame(path: string, cmds: string, unlock: boolean, autologin = false, login = "", pwd = "") {
-    return (await invoke("plugin:game|launch_game", { path, cmds, unlock, autologin, login, pwd })) as boolean
+export async function launchGame(path: string, cmds: string, unlock: boolean, autologin = false, autosend = false, login = "", pwd = "") {
+    return (await invoke("plugin:game|launch_game", { path, cmds, unlock, autologin, autosend, login, pwd })) as boolean
 }
 export async function getUid() {
     return (await invoke("plugin:game|get_uid")) as { uid: string; usk: string; usd: string }
@@ -22,5 +22,8 @@ export async function setUsd(usk: string, usd: string) {
     return (await invoke("plugin:game|set_usd", { usk, usd })) as void
 }
 export async function autoJoin(uid: string) {
-    return (await invoke("plugin:game|auto_join", { uid })) as void
+    return (await invoke("plugin:game|auto_join", { uid })) as boolean
+}
+export async function autoOpen() {
+    return (await invoke("plugin:game|auto_open")) as boolean
 }

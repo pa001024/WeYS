@@ -12,6 +12,7 @@ fn main() {
                 "set_regsk",
                 "get_game",
                 "auto_join",
+                "auto_open",
                 "launch_game",
             ]),
         )

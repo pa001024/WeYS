@@ -97,10 +97,9 @@ pub fn run() {
 
             #[cfg(target_os = "windows")]
             {
-                let acrylic_available = apply_acrylic(&window, Some((0, 0, 0, 0))).is_ok();
-                if acrylic_available {
-                    println!("Acrylic is available");
-                }
+                use sysinfo::System;
+                let mut sys = System::new_all();
+                sys.refresh_all();
 
                 use windows_sys::Win32::Foundation::CloseHandle;
                 use windows_sys::Win32::System::Threading::CreateMutexA;
@@ -141,7 +140,23 @@ pub fn run() {
                         }
                     });
                 };
-                set_mat_check("Acrylic");
+                if let Some(version) = System::os_version() {
+                    if version.starts_with("11") {
+                        let acrylic_available = apply_acrylic(&window, Some((0, 0, 0, 0))).is_ok();
+                        if acrylic_available {
+                            println!("Acrylic is available");
+                            set_mat_check("Acrylic");
+                        }
+                    } else if version.starts_with("10") {
+                        let blur_available = apply_blur(&window, Some((0, 0, 0, 0))).is_ok();
+                        if blur_available {
+                            println!("Blur is available");
+                            set_mat_check("Blur");
+                        }
+                    } else {
+                        set_mat_check("None");
+                    }
+                }
 
                 let _tray = TrayIconBuilder::new()
                     .menu(&menu)

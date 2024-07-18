@@ -61,6 +61,7 @@
         "game:allow-set-usd",
         "game:allow-set-regsk",
         "game:allow-auto-join",
+        "game:allow-auto-open",
         "game:allow-launch-game",
         "game:allow-get-game"
     ]
