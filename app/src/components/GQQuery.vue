@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { AnyVariables, TypedDocumentNode, useQuery } from "@urql/vue"
+import { gql, useQuery } from "@urql/vue"
 import { computed, watch } from "vue"
 const props = defineProps<{
-    query: TypedDocumentNode<any, AnyVariables>
+    query: string
     variables: any
     requestPolicy?: "cache-first" | "cache-only" | "network-only" | "cache-and-network"
     dataKey?: string
@@ -15,7 +15,7 @@ const variables = computed(() => {
 })
 
 const { data, fetching, stale } = useQuery({
-    query: props.query,
+    query: gql(props.query),
     variables,
     requestPolicy: props.requestPolicy || "cache-and-network",
 })

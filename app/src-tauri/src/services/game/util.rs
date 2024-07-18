@@ -85,6 +85,11 @@ pub fn click(x: i32, y: i32, count: u32) {
     }
 }
 
+pub fn wheel(delta: i32) {
+    unsafe { mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta as i32, 0) }
+    sleep(1);
+}
+
 pub fn sleep(ms: u32) {
     std::thread::sleep(std::time::Duration::from_millis(ms as u64));
 }
@@ -154,17 +159,17 @@ fn key_up(key: u16) {
     unsafe { keybd_event(key as u8, 0, KEYEVENTF_KEYUP, 0) }
 }
 
-// pub fn key_press(key: &str, duration: u32) {
-//     let vkey = key_to_vkey(key);
-//     if vkey == 0 {
-//         panic!("无效的按键: {}", key);
-//     }
-//     key_down(vkey);
-//     if duration > 0 {
-//         sleep(duration);
-//     }
-//     key_up(vkey);
-// }
+pub fn key_press(key: &str, duration: u32) {
+    let vkey = key_to_vkey(key);
+    if vkey == 0 {
+        panic!("无效的按键: {}", key);
+    }
+    key_down(vkey);
+    if duration > 0 {
+        sleep(duration);
+    }
+    key_up(vkey);
+}
 
 /// 组合键
 pub fn combo_key_press(keys: &[&str], duration: u32) {
@@ -291,7 +296,7 @@ fn key_to_vkey(key: &str) -> u16 {
     }
 }
 
-pub(crate) fn get_procees_by_name(name: &str) -> Result<u32, Win32Error> {
+pub(crate) fn get_process_by_name(name: &str) -> Result<u32, Win32Error> {
     unsafe {
         let mut processes: Vec<PROCESSENTRY32W> = Vec::new();
         let snapshot_handle = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);

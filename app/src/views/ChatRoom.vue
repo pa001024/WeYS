@@ -1,16 +1,24 @@
 <script lang="ts" setup>
 import { useTimestamp } from "@vueuse/core"
 import { useScroll } from "@vueuse/core"
+import { useSound } from "@vueuse/sound"
 import { computed, onMounted, ref, watch } from "vue"
 import { isImage, sanitizeHTML } from "../mod/util/html"
 import { gql, useQuery, useSubscription } from "@urql/vue"
 import { useRoute } from "vue-router"
-import { useEditMessageMutation, useSendMessageMutation } from "../mod/api/mutation"
+import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation, sendMessageMutation } from "../mod/api/mutation"
 import { useUserStore } from "../mod/state/user"
+import { useGameStore } from "../mod/state/game"
+import { env } from "../env"
+import { autoJoin } from "../mod/api/game"
+import { copyText } from "../mod/util/copy"
 
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
 const user = useUserStore()
+const game = useGameStore()
+const newMsgTip = ref(true)
+const newMsgJoin = ref(false)
 
 const el = ref<HTMLElement | null>(null)
 
@@ -38,21 +46,6 @@ onMounted(() => {
     if (msgCount.value > 0) user.setRoomReadedCount(roomId.value, msgCount.value)
 })
 
-const Query = /* GraphQL */ `
-    query ($roomId: String!, $limit: Int, $offset: Int) {
-        msgs(roomId: $roomId, limit: $limit, offset: $offset) {
-            id
-            edited
-            content
-            createdAt
-            user {
-                id
-                name
-                qq
-            }
-        }
-    }
-`
 const variables = computed(() => ({ roomId: roomId.value }))
 
 type Msg = {
@@ -63,7 +56,22 @@ type Msg = {
     user: { id: string; name: string; qq: number }
 }
 
-useSubscription<{ newMessage: Msg; msgEdited: Msg }, Msg[]>(
+type Task = {
+    id: string
+    name: string
+    desc: string
+    maxUser: number
+    userList: string[]
+    startTime: string
+    endTime: string
+    roomId: string
+    userId: string
+    createdAt: string
+    updateAt: string
+    user: { id: string; name: string; qq: number }
+}
+
+useSubscription<{ newMessage: Msg }>(
     {
         query: gql`
             subscription ($roomId: String!) {
@@ -86,11 +94,11 @@ useSubscription<{ newMessage: Msg; msgEdited: Msg }, Msg[]>(
         if (data.newMessage) {
             addMessage(data.newMessage)
         }
-        return []
+        return data
     }
 )
 
-useSubscription<{ newMessage: Msg; msgEdited: Msg }, Msg[]>({
+useSubscription<{ msgEdited: Msg }>({
     query: gql`
         subscription ($roomId: String!) {
             msgEdited(roomId: $roomId) {
@@ -98,6 +106,67 @@ useSubscription<{ newMessage: Msg; msgEdited: Msg }, Msg[]>({
                 edited
                 content
                 createdAt
+                user {
+                    id
+                    name
+                    qq
+                }
+            }
+        }
+    `,
+    variables: { roomId },
+})
+
+const newTaskSound = useSound("/sfx/notice.mp3")
+
+useSubscription<{ newTask: Task }>(
+    {
+        query: gql`
+            subscription ($roomId: String!) {
+                newTask(roomId: $roomId) {
+                    id
+                    name
+                    desc
+                    maxUser
+                    userList
+                    startTime
+                    endTime
+                    createdAt
+                    updateAt
+                    user {
+                        id
+                        name
+                        qq
+                    }
+                }
+            }
+        `,
+        variables: { roomId },
+    },
+    (_, data) => {
+        if (data.newTask) {
+            // 播放音效
+            if (newMsgTip.value) newTaskSound.play()
+            // 自动加入
+            if (newMsgJoin.value) autoJoinGame(data.newTask)
+        }
+        return data
+    }
+)
+
+useSubscription<{ updateTask: Task }>({
+    query: gql`
+        subscription ($roomId: String!) {
+            updateTask(roomId: $roomId) {
+                id
+                name
+                desc
+                maxUser
+                userList
+                startTime
+                endTime
+                createdAt
+                updateAt
                 user {
                     id
                     name
@@ -128,7 +197,6 @@ const input = ref<HTMLDivElement>(null as any)
 const inputForm = ref<HTMLDivElement>(null as any)
 const newMsgText = ref("")
 
-const doSendMessage = useSendMessageMutation()
 async function sendMessage(e: Event) {
     if ((e as KeyboardEvent)?.shiftKey) {
         return
@@ -140,7 +208,7 @@ async function sendMessage(e: Event) {
     if (!content) return
     input.value.innerHTML = ""
     input.value.focus()
-    await doSendMessage({ content, roomId: roomId.value })
+    await sendMessageMutation({ content, roomId: roomId.value })
     el.value?.scrollTo({
         top: el.value.scrollHeight,
         left: 0,
@@ -162,20 +230,62 @@ function insertEmoji(text: string) {
     range.collapse(false)
 }
 
+async function insertImage() {
+    const fi = document.createElement("input")
+    fi.type = "file"
+    fi.click()
+    fi.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = async (e) => {
+            const data = e.target!.result as string
+            const el = input.value
+            el.focus()
+            const sel = window.getSelection()!
+            const range = sel.getRangeAt(0)
+            const node = document.createElement("div")
+            node.innerHTML = `<img src="${data}" />`
+            let frag = document.createDocumentFragment()
+            while (node.firstChild) frag.appendChild(node.firstChild)
+            range.deleteContents()
+            range.insertNode(frag)
+            range.collapse(false)
+        }
+    }
+}
+
+async function addTask() {
+    const uid = await navigator.clipboard.readText()
+    if (uid.match(/\d{9}/)) {
+        await addTaskMutation({
+            roomId: roomId.value,
+            name: uid,
+            maxUser: 3,
+            maxAge: 30,
+            desc: "软饭",
+        })
+    }
+}
+
+async function endTask(task: Task) {
+    await endTaskMutation({ taskId: task.id })
+}
+
 const editId = ref("")
 const editInput = ref<HTMLDivElement[] | null>(null)
-const doEditMessage = useEditMessageMutation()
 async function editMessage(msgId: string, content: string) {
-    await doEditMessage({ content, msgId })
+    await editMessageMutation({ content, msgId })
 }
-const retractCache = new WeakMap()
+const retractCache = new Map<string, string>()
 async function retractMessage(msg: Msg) {
-    retractCache.set(msg, msg.content)
+    retractCache.set(msg.id, msg.content)
     await editMessage(msg.id, "")
     msg.content = ""
 }
 async function restoreMessage(msg: Msg) {
-    const content = retractCache.get(msg)
+    const content = retractCache.get(msg.id)
     msg.content = content || msg.content
     startEdit(msg)
 }
@@ -192,7 +302,24 @@ async function startEdit(msg: Msg) {
             msg.content = newVal
             msg.edited = 1
             editId.value = ""
+            el.onblur = null
+            el.onkeydown = null
         }
+        el.onkeydown = (e: KeyboardEvent) => {
+            if (!e.ctrlKey && !e.altKey && !e.shiftKey && e.key === "Enter") {
+                e.preventDefault()
+                el.blur()
+            }
+        }
+    }
+}
+
+async function autoJoinGame(task: Task) {
+    if (!task.userList.includes(user.id!)) await joinTaskMutation({ taskId: task.id })
+    if (env.isApp && game.running) {
+        await autoJoin(task.name)
+    } else {
+        await copyText(task.name)
     }
 }
 </script>
@@ -200,7 +327,50 @@ async function startEdit(msg: Msg) {
 <template>
     <div class="w-full h-full bg-base-200/50 flex">
         <!-- 聊天窗口 -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex flex-col overflow-hidden relative">
+            <div class="flex flex-col gap-2 absolute left-0 right-0 justify-center z-10 p-4">
+                <!-- 任务列表 -->
+                <GQQuery
+                    :query="`query ($roomId: String!) {
+    doingTasks(roomId: $roomId) {
+        id,name,desc,maxUser,maxAge,userList,startTime,endTime,roomId,userId,createdAt,updateAt,user {id,name,qq}
+    }
+}
+`"
+                    :variables="variables"
+                    v-slot="{ data }"
+                >
+                    <transition-group name="slide-right">
+                        <div
+                            v-if="data"
+                            v-for="item in data.doingTasks"
+                            :key="item"
+                            class="flex items-center justify-between gap-2 bg-base-100 shadow-md rounded-md p-4"
+                        >
+                            <div class="flex gap-2 items-center">
+                                <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
+                                    item.desc
+                                }}</span>
+                                <span class="select-all">{{ item.name }}</span>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <span>{{ item.userList.length }} / {{ item.maxUser }}</span>
+                            </div>
+                            <div class="flex-none flex gap-2">
+                                <div class="btn btn-sm btn-primary" @click="endTask(item)">
+                                    {{ $t("task.end") }}
+                                </div>
+                                <div v-if="env.isApp && game.running" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                    {{ $t("task.join") }}
+                                </div>
+                                <div v-else class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                    {{ $t("task.copy") }}
+                                </div>
+                            </div>
+                        </div>
+                    </transition-group>
+                </GQQuery>
+            </div>
             <GQAutoPage
                 v-if="msgCount"
                 @loadref="(r) => (el = r)"
@@ -209,7 +379,12 @@ async function startEdit(msg: Msg) {
                 innerClass="flex w-full h-full flex-col gap-2 p-4"
                 :limit="20"
                 :offset="msgCount"
-                :query="Query"
+                :query="`query ($roomId: String!, $limit: Int, $offset: Int) {
+    msgs(roomId: $roomId, limit: $limit, offset: $offset) {
+        id,edited,content,createdAt,user {id,name,qq}
+    }
+}
+`"
                 :variables="variables"
                 dataKey="msgs"
                 v-slot="{ data }"
@@ -230,7 +405,7 @@ async function startEdit(msg: Msg) {
                                 <ContextMenuItem
                                     class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
                                 >
-                                    <Icon class="size-4 mr-2" icon="la:eye" />
+                                    <Icon class="size-4 mr-2" icon="la:eye-slash" />
                                     {{ $t("chat.block") }}
                                 </ContextMenuItem>
                                 <ContextMenuItem
@@ -284,7 +459,7 @@ async function startEdit(msg: Msg) {
             <div v-else class="flex-1 flex flex-col items-center justify-center">
                 <div class="flex-1 flex flex-col items-center justify-center">
                     <div class="flex p-4 font-bold text-lg text-base-content/60">{{ $t("chat.newRoomBanner") }}</div>
-                    <div class="flex btn btn-primary" @click="doSendMessage({ content: $t('chat.hello'), roomId })">
+                    <div class="flex btn btn-primary" @click="sendMessageMutation({ content: $t('chat.hello'), roomId })">
                         {{ $t("chat.sayHello") }}
                     </div>
                 </div>
@@ -297,34 +472,56 @@ async function startEdit(msg: Msg) {
                 ></div>
             </div>
             <!-- 输入 -->
-            <form
-                class="h-44 flex flex-col relative border-t-[1px] border-base-300/50 pointer-events-none"
-                ref="inputForm"
-                @submit="sendMessage"
-            >
+            <form class="h-44 flex flex-col relative border-t-[1px] border-base-300/50" ref="inputForm" @submit="sendMessage">
                 <!-- 工具栏 -->
                 <div class="flex-none p-1 px-2 border-t-[1px] border-base-300/50 flex items-center gap-2">
                     <!-- 表情 -->
                     <Popover side="top">
-                        <div class="btn btn-sm btn-square text-2xl hover:text-primary pointer-events-auto">
+                        <div class="btn btn-ghost btn-sm btn-square text-xl hover:text-primary">
                             <Icon icon="la:smile" />
                         </div>
                         <template #content>
                             <EmojiSelect @select="insertEmoji" />
                         </template>
                     </Popover>
+                    <Tooltip side="top" :tooltip="$t('chat.insertImage')">
+                        <div class="btn btn-ghost btn-sm btn-square text-xl hover:text-primary" @click="insertImage">
+                            <Icon icon="la:image-solid" />
+                        </div>
+                    </Tooltip>
+                    <Tooltip side="top" :tooltip="$t('chat.sendTask')">
+                        <CheckAnimationButton icon="la:plus-solid" @click="addTask" />
+                    </Tooltip>
+                    <Tooltip side="top" :tooltip="$t('chat.sound')">
+                        <div
+                            class="btn btn-ghost btn-sm btn-square text-xl"
+                            :class="{ ' text-primary': newMsgTip }"
+                            @click="newMsgTip = !newMsgTip"
+                        >
+                            <Icon icon="la:volume-up-solid" />
+                        </div>
+                    </Tooltip>
+                    <Tooltip side="top" :tooltip="$t('chat.autoJoin')">
+                        <div
+                            class="btn btn-ghost btn-sm btn-square text-xl"
+                            :class="{ ' text-primary': newMsgJoin }"
+                            @click="newMsgJoin = !newMsgJoin"
+                        >
+                            A
+                        </div>
+                    </Tooltip>
                 </div>
                 <!-- 输入框 -->
                 <RichInput
-                    mode="text"
+                    mode="html"
                     v-model="newMsgText"
                     @loadref="(r) => (input = r)"
                     @enter="sendMessage"
-                    placeholder="输入聊天内容"
-                    class="flex-1 overflow-hidden pointer-events-auto"
+                    :placeholder="$t('chat.chatPlaceholder')"
+                    class="flex-1 overflow-hidden"
                 />
                 <!-- 操作栏 -->
-                <div class="flex p-2 pointer-events-auto">
+                <div class="flex p-2">
                     <div class="flex-1"></div>
                     <button class="btn btn-sm btn-primary px-6">{{ $t("chat.send") }}</button>
                 </div>

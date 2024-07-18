@@ -11,6 +11,7 @@ fn main() {
                 "set_usd",
                 "set_regsk",
                 "get_game",
+                "auto_join",
                 "launch_game",
             ]),
         )

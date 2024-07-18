@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import { gql } from "@urql/vue"
 import { until, useInfiniteScroll } from "@vueuse/core"
 import { Ref, computed, nextTick, onMounted, ref, watch } from "vue"
-
-type gqlQuery = string
 
 const props = defineProps<{
     distance?: number
@@ -11,7 +8,7 @@ const props = defineProps<{
     limit?: number
     offset?: number
     innerClass?: string
-    query: gqlQuery
+    query: string
     variables: any
     dataKey: string
     requestPolicy?: "cache-first" | "cache-only" | "network-only" | "cache-and-network"
@@ -116,17 +113,16 @@ watch(el, (newVal) => {
             </div>
             <GQQuery
                 v-for="(page, index) in pages"
-                :query="gql(query)"
+                :query="query"
                 :variables="variables"
                 :limit="page.limit"
                 :offset="page.offset"
                 @load="pages[index].loaded = true"
                 @end="end = direction === 'top' ? pages.length > 1 : true"
                 :dataKey="dataKey"
+                v-slot="{ data, fetching, stale }"
             >
-                <template #default="{ data, fetching, stale }">
-                    <slot :data="data" :fetching="fetching" :stale="stale"></slot>
-                </template>
+                <slot :data="data" :fetching="fetching" :stale="stale"></slot>
             </GQQuery>
             <div v-if="loading && direction !== 'top'" class="flex justify-center items-center p-2">
                 <span class="loading loading-spinner loading-md"></span>

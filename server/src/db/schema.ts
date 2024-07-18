@@ -122,7 +122,7 @@ export const logins = sqliteTable("logins", {
     id: text("id").$default(id).primaryKey(),
     userId: text("user_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     ip: text("ip"),
     ua: text("ua"),
     createdAt: text("created_at").$default(now),
@@ -137,7 +137,7 @@ export const passwords = sqliteTable("passwords", {
     id: text("id").$default(id).primaryKey(),
     userId: text("user_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     hash: text("hash").notNull(),
     createdAt: text("created_at").$default(now),
     updateAt: text("update_at").$onUpdate(now),
@@ -150,7 +150,7 @@ export const rooms = sqliteTable("rooms", {
     type: text("type"),
     ownerId: text("owner_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     maxUsers: integer("max_users"),
     createdAt: text("created_at").$default(now),
     updateAt: text("update_at").$onUpdate(now),
@@ -169,10 +169,10 @@ export const roomViews = sqliteTable(
         id: text("id").$default(id).primaryKey(),
         roomId: text("room_id")
             .notNull()
-            .references(() => rooms.id),
+            .references(() => rooms.id, { onDelete: "cascade" }),
         userId: text("user_id")
             .notNull()
-            .references(() => users.id),
+            .references(() => users.id, { onDelete: "cascade" }),
         status: text("status", { enum: ["online", "exited"] })
             .notNull()
             .$default(() => "online"),
@@ -197,10 +197,10 @@ export const msgs = sqliteTable(
         id: text("id").$default(id).primaryKey(),
         roomId: text("room_id")
             .notNull()
-            .references(() => rooms.id),
+            .references(() => rooms.id, { onDelete: "cascade" }),
         userId: text("user_id")
             .notNull()
-            .references(() => users.id),
+            .references(() => users.id, { onDelete: "cascade" }),
         content: text("content").notNull(),
         edited: integer("edited").$default(() => 0),
         createdAt: text("created_at").$default(now),
@@ -258,7 +258,7 @@ export const notifications = sqliteTable("notifications", {
     id: text("id").$default(id).primaryKey(),
     userId: text("user_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     type: text("type").notNull(),
     content: text("content").notNull(),
     isRead: integer("is_read").$default(() => 0),
@@ -281,7 +281,7 @@ export const schedules = sqliteTable("schedules", {
     repeatCount: integer("repeat_count"),
     userId: text("user_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     createdAt: text("created_at").$default(now),
     updateAt: text("update_at").$onUpdate(now),
 })
@@ -294,16 +294,23 @@ export const schedulesRelations = relations(schedules, ({ one }) => ({
 export const tasks = sqliteTable("tasks", {
     id: text("id").$default(id).primaryKey(),
     name: text("name").notNull(),
-    startTime: text("start_time").notNull(),
-    endTime: text("end_time").notNull(),
-    status: text("status").$default(() => "todo"),
+    desc: text("desc"),
+    startTime: text("start_time"),
+    endTime: text("end_time"),
+    maxUser: integer("max_user").notNull(),
+    maxAge: integer("max_age"),
+    userList: text("user_list", { mode: "json" }).notNull().$type<Array<string>>(),
+    roomId: text("room_id")
+        .notNull()
+        .references(() => rooms.id, { onDelete: "cascade" }),
     userId: text("user_id")
         .notNull()
-        .references(() => users.id),
+        .references(() => users.id, { onDelete: "cascade" }),
     createdAt: text("created_at").$default(now),
     updateAt: text("update_at").$onUpdate(now),
 })
 
 export const tasksRelations = relations(tasks, ({ one }) => ({
+    room: one(rooms, { fields: [tasks.roomId], references: [rooms.id] }),
     user: one(users, { fields: [tasks.userId], references: [users.id] }),
 }))

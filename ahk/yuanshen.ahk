@@ -67,9 +67,10 @@ WatchClipboard(data) {
 #HotIf
 ; 静音当前程序
 *Launch_Media:: {
-  hwnd := GetForegroundWindow()
+  MouseGetPos(, , &hwnd)
+  ; hwnd := GetForegroundWindow()
   p := WinGetProcessName(hwnd)
-  msg("静音当前程序：" . p)
+  msg("静音当前程序：" . p . " (" . GetKeyState("Shift", "P") . ")")
   setProgramVol(p, GetKeyState("Shift", "P") ? 1 : 0)
 }
 

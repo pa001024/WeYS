@@ -45,6 +45,7 @@ export const typeDefs = /* GraphQL */ `
         maxUsers: Int
     }
 `
+
 export const resolvers = {
     Query: {
         rooms: async (parent, args, context, info: any) => {

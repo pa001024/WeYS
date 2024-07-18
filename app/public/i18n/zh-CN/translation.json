@@ -36,7 +36,9 @@
     "prev": "切换到上一个 (右键同时启动游戏)",
     "next": "切换到下一个 (右键同时启动游戏)",
     "accountConflict": "账号与{{acc}}重复, 确认要添加吗?",
-    "autoLogin": "自动登录"
+    "autoLogin": "自动登录",
+    "autoLoginRoom": "选择房间自动发送UID...",
+    "autoSend": "自动发饭"
   },
   "chat": {
     "title": "聊天",
@@ -64,7 +66,12 @@
     "deleteRoomConfirm": "确认要删除房间吗?",
     "deleteRoomFailed": "删除失败",
     "unlimited": "不限制",
-    "roomMaxUser": "最大人数"
+    "roomMaxUser": "最大人数",
+    "insertImage": "发送图片",
+    "sendTask": "发送UID(剪贴板)",
+    "chatPlaceholder": "输入聊天内容",
+    "sound": "提示音",
+    "autoJoin": "自动加入"
   },
   "user": {
     "title": "用户",
@@ -140,5 +147,10 @@
   },
   "voice": {
     "title": "语音"
+  },
+  "task": {
+    "end": "结束",
+    "join": "加入",
+    "copy": "复制"
   }
 }

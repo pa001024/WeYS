@@ -10,6 +10,7 @@ import { db, GameAccount } from "../db"
 import { useObservable } from "@vueuse/rxjs"
 import { liveQuery } from "dexie"
 import { t } from "i18next"
+import { addTaskAsyncMutation } from "../api/mutation"
 
 function hash(s: string) {
     return enc.Hex.stringify(SHA1(s))
@@ -65,6 +66,7 @@ export const useGameStore = defineStore("game", {
             beforeGameEnable: useLocalStorage("game_before_enable", false),
             afterGameEnable: useLocalStorage("game_after_enable", false),
             autoLoginEnable: useLocalStorage("game_auto_login_enable", false),
+            autoLoginRoom: useLocalStorage("game_auto_login_room", "-"),
             path: useLocalStorage("game_path", ""),
             beforeGame: useLocalStorage("game_before", ""),
             afterGame: useLocalStorage("game_after", ""),
@@ -169,11 +171,13 @@ export const useGameStore = defineStore("game", {
             }
         },
 
-        async copyUID(id: number) {
+        async copyUID(id?: number) {
+            if (!id) id = this.selected
             const account = await db.gameAccounts.get(id)
             if (account) {
                 if (account.uid) {
                     clipboard.writeText(`${account.uid}`)
+                    return account.uid
                 }
             }
         },
@@ -206,7 +210,8 @@ export const useGameStore = defineStore("game", {
                 console.log("update account", acc)
                 await db.gameAccounts.update(old.id, acc)
             } else {
-                await db.gameAccounts.add(acc)
+                const newID = await db.gameAccounts.add(acc)
+                if (newID) this.selected = newID
             }
         },
 
@@ -266,13 +271,26 @@ export const useGameStore = defineStore("game", {
                     account?.login,
                     account?.pwd
                 )
-                if (this.autoLoginEnable && account?.login && account?.pwd) {
+                if (this.autoLoginEnable) {
                     await event.once("game_login", async (e) => {
                         const payload = e.payload as { success: boolean }
                         console.log("game_login", payload.success)
                         if (payload.success) {
                             await this.addAccountReg()
-                            this.copyUID(this.selected)
+                            const uid = await this.copyUID()
+                            if (this.autoLoginRoom !== "-" && uid) {
+                                const taskEnded = await addTaskAsyncMutation({
+                                    roomId: this.autoLoginRoom,
+                                    name: uid,
+                                    maxUser: 3,
+                                    maxAge: 30,
+                                    desc: "软饭",
+                                })
+                                console.log("taskEnded", taskEnded)
+                                if (this.selectNext()) {
+                                    this.launchGame()
+                                }
+                            }
                         }
                     })
                 }

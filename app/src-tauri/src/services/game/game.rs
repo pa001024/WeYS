@@ -29,13 +29,21 @@ impl GameControl {
         unsafe { GetForegroundWindow() == self.hwnd }
     }
 
+    pub fn isNormalSize(&self) -> bool {
+        if self.w / self.h == 16 / 9 {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn focus(&self) {
         set_foreground_window(self.hwnd);
     }
 
     pub fn toScreenPos(&self, x: i32, y: i32) -> (i32, i32) {
         let mut point = POINT { x, y };
-        let _ = unsafe { ClientToScreen(self.hwnd, &mut point) };
+        unsafe { ClientToScreen(self.hwnd, &mut point) };
         (
             point.x * self.w as i32 / 1600,
             point.y * self.h as i32 / 900,
@@ -55,9 +63,50 @@ impl GameControl {
         click(x, y, 0);
     }
 
+    pub fn MouseGetPos(&self) -> [i32; 2] {
+        let mut point = unsafe { zeroed::<POINT>() };
+        unsafe { GetCursorPos(&mut point) };
+        unsafe { ClientToScreen(self.hwnd, &mut point) };
+        [point.x, point.y]
+    }
+
+    fn savePos(&self, restore: bool) {
+        static mut MX: i32 = 0;
+        static mut MY: i32 = 0;
+        if restore {
+            click(unsafe { MX }, unsafe { MY }, 0);
+        } else {
+            let pos = self.MouseGetPos();
+            unsafe {
+                MX = pos[0];
+                MY = pos[1];
+            }
+        }
+    }
+
+    pub fn SavePos(&self) {
+        self.savePos(false);
+    }
+
+    pub fn RestorePos(&self) {
+        self.savePos(true);
+    }
+
+    pub fn Wheel(&self, y: i32) {
+        wheel(-y);
+    }
+
     pub fn Click(&self, x: i32, y: i32) {
         let (x, y) = self.toScreenPos(x, y);
         click(x, y, 1);
+    }
+
+    // 后台点击
+    pub fn PostClick(&self, x: i32, y: i32) {
+        let (x, y) = self.toScreenPos(x, y);
+        self.SavePos();
+        self.Click(x, y);
+        self.RestorePos();
     }
 
     pub fn CheckColor(&self, x: i32, y: i32, color: &str) -> bool {
@@ -89,6 +138,10 @@ impl GameControl {
             }
         }
         false
+    }
+
+    pub fn PressKey(&self, key: &str) {
+        key_press(key, 0);
     }
 
     pub fn SendText(&self, text: &str) {

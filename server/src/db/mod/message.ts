@@ -192,23 +192,23 @@ export const resolvers = {
     },
     Subscription: {
         newMessage: async (parent, { roomId }, { user, pubsub }, info) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             return pubsub.subscribe("newMessage", roomId)
         },
         newReaction: async (parent, { roomId }, { user, pubsub }, info) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             return pubsub.subscribe("newReaction", roomId)
         },
         msgEdited: async (parent, { roomId }, { user, pubsub }, info) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             return pubsub.subscribe("msgEdited", roomId)
         },
         userJoined: async (parent, { roomId }, { user, pubsub }, info) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             return pubsub.subscribe("userJoined", roomId)
         },
         userLeaved: async (parent, { roomId }, { user, pubsub }, info) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             return pubsub.subscribe("userLeaved", roomId)
         },
     },

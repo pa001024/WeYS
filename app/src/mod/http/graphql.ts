@@ -38,6 +38,95 @@ const cacheExchange = offlineExchange({
     updates: {
         Mutation: {},
         Subscription: {
+            updateTask(result: any, args, cache, _info) {
+                const fragment = gql`
+                    fragment _ on Task {
+                        id
+                        userList
+                        startTime
+                        endTime
+                    }
+                `
+
+                const task = result.updateTask
+                cache.writeFragment(fragment, {
+                    id: task.id,
+                    userList: task.userList,
+                    startTime: task.startTime,
+                    endTime: task.endTime,
+                })
+                if (task.endTime) {
+                    cache.updateQuery(
+                        {
+                            query: gql`
+                                query ($roomId: String!) {
+                                    doingTasks(roomId: $roomId) {
+                                        id
+                                        name
+                                        desc
+                                        maxUser
+                                        maxAge
+                                        userList
+                                        startTime
+                                        endTime
+                                        roomId
+                                        userId
+                                        createdAt
+                                        updateAt
+                                        user {
+                                            id
+                                            name
+                                            qq
+                                        }
+                                    }
+                                }
+                            `,
+                            variables: { roomId: args.roomId },
+                        },
+                        (data) => {
+                            if (!data) return { doingTasks: [] }
+                            data.doingTasks = data.doingTasks.filter((v: any) => !v.endTime)
+                            return data
+                        }
+                    )
+                }
+            },
+            newTask(result: any, args, cache, _info) {
+                const task = result.newTask
+                cache.updateQuery(
+                    {
+                        query: gql`
+                            query ($roomId: String!) {
+                                doingTasks(roomId: $roomId) {
+                                    id
+                                    name
+                                    desc
+                                    maxUser
+                                    maxAge
+                                    userList
+                                    startTime
+                                    endTime
+                                    roomId
+                                    userId
+                                    createdAt
+                                    updateAt
+                                    user {
+                                        id
+                                        name
+                                        qq
+                                    }
+                                }
+                            }
+                        `,
+                        variables: { roomId: args.roomId },
+                    },
+                    (data) => {
+                        if (!data) return { doingTasks: [task] }
+                        data.doingTasks.push(task)
+                        return data
+                    }
+                )
+            },
             newMessage(result: any, args, cache, _info) {
                 const msg = result.newMessage
                 const roomCache = cache.readFragment<{ id: string; msgCount?: number }>(

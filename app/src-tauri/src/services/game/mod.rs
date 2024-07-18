@@ -12,9 +12,84 @@ use game::GameControl;
 mod game;
 mod util;
 
+const GAME_PROCESS: &str = "YuanShen.exe";
+
 #[derive(Serialize, Deserialize, Clone)]
 struct LoginPayload {
     success: bool,
+}
+
+#[tauri::command]
+async fn auto_join(uid: String) -> bool {
+    let pid = get_process_by_name(GAME_PROCESS).unwrap_or(0);
+    let mut elapsed = Duration::from_secs(0);
+    let timeout = Duration::from_secs(2);
+    let interval = Duration::from_millis(100);
+    let interval2 = Duration::from_millis(10);
+    if let Some(hwnd) = get_window_by_process(pid) {
+        let ctl = GameControl::new(hwnd);
+        if !ctl.isNormalSize() {
+            return false;
+        }
+        ctl.focus();
+        while elapsed <= timeout {
+            if enter_f2(&ctl) {
+                // UID搜索结果不唯一
+                while ctl.CheckColor(1336, 581, "323232") {
+                    tokio::time::sleep(interval2).await;
+                    ctl.Wheel(1);
+                }
+                println!("粘贴UID");
+                while elapsed <= timeout {
+                    if ctl.CheckColor(1219, 93, "FFFFFF") {
+                        set_clipboard_text(uid.as_str());
+                        tokio::time::sleep(interval2).await;
+                        elapsed += interval2;
+                        ctl.Click(1249, 102); // 粘贴
+                    } else {
+                        break;
+                    }
+                    tokio::time::sleep(interval2).await;
+                    elapsed += interval2;
+                }
+                println!("开始搜索");
+                while elapsed <= timeout {
+                    // 搜索
+                    ctl.Click(1428, 102);
+                    tokio::time::sleep(interval).await;
+                    // 点进入
+                    ctl.Click(1411, 203);
+                    tokio::time::sleep(interval).await;
+                    elapsed += interval * 2;
+                }
+                return true;
+            }
+            tokio::time::sleep(interval).await;
+            elapsed += interval;
+        }
+    }
+    return false;
+}
+
+fn enter_f2(ctl: &GameControl) -> bool {
+    save_dc();
+    // F2 界面
+    if ctl.CheckColorS(63, 38, "D3BC8E") && ctl.CheckColorS(1537, 54, "ECE5D8") {
+        free_dc();
+        return true;
+    }
+    // 加载界面
+    if ctl.CheckColorS(333, 333, "1C1C22|FFFFFF|000000") {
+        free_dc();
+        return false;
+    }
+    // 1P主界面
+    if ctl.CheckColorS(298, 44, "FFFFFF") {
+        free_dc();
+        ctl.PressKey("f2");
+        return false;
+    }
+    false
 }
 
 #[tauri::command]
@@ -27,7 +102,7 @@ pub fn launch_game<R: Runtime>(
     login: String,
     pwd: String,
 ) -> bool {
-    let pid = get_procees_by_name("YuanShen.exe").unwrap_or(0);
+    let pid = get_process_by_name(GAME_PROCESS).unwrap_or(0);
     let mut x = 0;
     let mut y = 0;
     if pid > 0 {
@@ -54,7 +129,7 @@ pub fn launch_game<R: Runtime>(
         // 等待游戏窗口出现
         println!("等待游戏窗口出现");
         loop {
-            if let Ok(npid) = get_procees_by_name("YuanShen.exe") {
+            if let Ok(npid) = get_process_by_name(GAME_PROCESS) {
                 if let Some(hwnd) = get_window_by_process(npid) {
                     if pid > 0 {
                         move_window(hwnd, x, y);
@@ -80,7 +155,7 @@ pub fn launch_game<R: Runtime>(
         }
 
         if autologin {
-            if let Ok(npid) = get_procees_by_name("YuanShen.exe") {
+            if let Ok(npid) = get_process_by_name(GAME_PROCESS) {
                 if let Some(hwnd) = get_window_by_process(npid) {
                     let ctl = GameControl::new(hwnd);
                     // 适龄提示
@@ -91,9 +166,10 @@ pub fn launch_game<R: Runtime>(
                         return;
                     }
                     println!("登录开始");
-                    ctl.focus();
-                    if !ctl.CheckColor(819, 838, "FFFFFF") {
+                    if !ctl.CheckColor(1510, 70, "1.9.D.") {
                         println!("需输入密码");
+                        ctl.focus();
+                        ctl.Sleep(100);
                         ctl.WaitColor(626, 274, "FFFFFF", 5.); // 登陆框
                         ctl.Click(971, 348);
                         ctl.Sleep(100);
@@ -110,12 +186,12 @@ pub fn launch_game<R: Runtime>(
                         ctl.Click(973, 580);
                     }
                     // 点击进入
-                    if ctl.WaitColor(762, 829, "FFFFFF", 10.) {
+                    if ctl.WaitColor(761, 827, "FFFFFF", 20.) {
                         println!("登录成功");
                         ctl.Click(819, 838);
                         // 等待加载完毕
                         println!("等待加载");
-                        ctl.WaitColor(51, 85, "4.6.A.", 20.);
+                        ctl.WaitColor(51, 85, "4.6.A.", 30.);
                         if ctl.CheckColor(77, 49, "FFFFFF") // 主界面
                             && ctl.CheckColor(385, 58, "FFFFFF")
                         // F2为白色
@@ -128,6 +204,7 @@ pub fn launch_game<R: Runtime>(
                                 ctl.Sleep(100);
                                 ctl.Click(485, 735); // 直接加入
                                                      // ctl.Click(473, 785); // 确认后可加入
+                                                     // ctl.Click(457, 686); // 无法加入
                                 ctl.Sleep(100);
                                 ctl.Click(469, 840); // 世界权限
                                 println!("登录结束");
@@ -178,7 +255,7 @@ pub fn launch_game<R: Runtime>(
 
 #[tauri::command]
 async fn kill_game() -> bool {
-    let pid = get_procees_by_name("YuanShen.exe").unwrap_or(0);
+    let pid = get_process_by_name("YuanShen.exe").unwrap_or(0);
     if pid > 0 {
         if let Ok(killed) = kill_process(pid) {
             if killed {
@@ -308,7 +385,7 @@ async fn get_game(is_run: bool) -> bool {
     let interval = Duration::from_millis(500); // 500ms
 
     while elapsed <= timeout {
-        let now_is_run = get_procees_by_name("YuanShen.exe").unwrap_or(0) > 0;
+        let now_is_run = get_process_by_name("YuanShen.exe").unwrap_or(0) > 0;
         if now_is_run != is_run {
             return now_is_run;
         }
@@ -327,6 +404,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             set_regsk,
             get_game,
             kill_game,
+            auto_join,
             launch_game
         ])
         .build()
@@ -334,11 +412,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::{get_procees_by_name, get_regsk, get_uid};
+    use super::{get_process_by_name, get_regsk, get_uid};
 
     #[test]
     fn test_get_procees() {
-        let rst = get_procees_by_name("YuanShen.exe").unwrap();
+        let rst = get_process_by_name("YuanShen.exe").unwrap();
         println!("rst: {}", rst);
     }
 

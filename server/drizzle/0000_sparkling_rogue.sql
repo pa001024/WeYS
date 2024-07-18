@@ -4,7 +4,7 @@ CREATE TABLE `logins` (
 	`ip` text,
 	`ua` text,
 	`created_at` text,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `msgs` (
@@ -15,8 +15,8 @@ CREATE TABLE `msgs` (
 	`edited` integer,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`room_id`) REFERENCES `rooms`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`room_id`) REFERENCES `rooms`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `notifications` (
@@ -27,7 +27,7 @@ CREATE TABLE `notifications` (
 	`is_read` integer,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `passwords` (
@@ -36,7 +36,7 @@ CREATE TABLE `passwords` (
 	`hash` text NOT NULL,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `reactions` (
@@ -54,8 +54,8 @@ CREATE TABLE `room_views` (
 	`status` text NOT NULL,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`room_id`) REFERENCES `rooms`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`room_id`) REFERENCES `rooms`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `rooms` (
@@ -66,7 +66,7 @@ CREATE TABLE `rooms` (
 	`max_users` integer,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `schedules` (
@@ -80,19 +80,23 @@ CREATE TABLE `schedules` (
 	`user_id` text NOT NULL,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `tasks` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
-	`start_time` text NOT NULL,
-	`end_time` text NOT NULL,
-	`status` text,
+	`desc` text,
+	`start_time` text,
+	`end_time` text,
+	`max_user` integer NOT NULL,
+	`user_list` text NOT NULL,
+	`room_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`created_at` text,
 	`update_at` text,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`room_id`) REFERENCES `rooms`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `user_reactions` (

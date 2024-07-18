@@ -1,16 +1,11 @@
 <script lang="ts" setup>
 import { useQuery, gql } from "@urql/vue"
 import { computed, nextTick, reactive, ref } from "vue"
-import {
-    useGuestMutation,
-    useLoginMutation,
-    useRegisterMutation,
-    useUpdatePasswordMutation,
-    useUpdateUserMetaMutation,
-} from "../mod/api/mutation"
+import { guestMutation, loginMutation, registerMutation, updatePasswordMutation, updateUserMetaMutation } from "../mod/api/mutation"
 import { t } from "i18next"
 import { useUserStore } from "../mod/state/user"
 import { useRoute, useRouter } from "vue-router"
+import { watch } from "vue"
 const user = useUserStore()
 const route = useRoute()
 const router = useRouter()
@@ -30,6 +25,15 @@ const { data, executeQuery: reloadMe } = useQuery({
     requestPolicy: "cache-and-network",
 })
 
+watch(
+    () => data.value.me,
+    (me) => {
+        if (user.id && !me) {
+            user.logout()
+        }
+    }
+)
+
 const nameEdit = reactive({
     active: false,
     name: "",
@@ -46,9 +50,8 @@ const loginForm = reactive({
     email: "",
     password: "",
 })
-const doLogin = useLoginMutation()
 async function login() {
-    const result = await doLogin({ email: loginForm.email, password: loginForm.password })
+    const result = await loginMutation({ email: loginForm.email, password: loginForm.password })
     console.debug("login", result)
     if (result?.success) {
         loginForm.open = false
@@ -70,9 +73,8 @@ const registerForm = reactive({
     email: "",
     password: "",
 })
-const doRegister = useRegisterMutation()
 async function register() {
-    const result = await doRegister({
+    const result = await registerMutation({
         email: registerForm.email,
         name: registerForm.name,
         qq: registerForm.qq,
@@ -96,9 +98,8 @@ const guestForm = reactive({
     name: "",
     qq: "",
 })
-const doGuest = useGuestMutation()
 async function guest() {
-    const result = await doGuest({
+    const result = await guestMutation({
         name: guestForm.name,
         qq: guestForm.qq,
     })
@@ -121,9 +122,8 @@ const updatePasswordForm = reactive({
     new_password: "",
 })
 
-const doUpdatePassword = useUpdatePasswordMutation()
 async function updatePassword() {
-    const result = await doUpdatePassword({
+    const result = await updatePasswordMutation({
         old_password: updatePasswordForm.old_password,
         new_password: updatePasswordForm.new_password,
     })
@@ -157,11 +157,10 @@ function reset(obj: any) {
     }
 }
 
-const doUpdateUserMeta = useUpdateUserMetaMutation()
 async function startNameEdit() {
     if (nameEdit.active) {
         nameEdit.active = false
-        const result = await doUpdateUserMeta({ name: nameEdit.name })
+        const result = await updateUserMetaMutation({ name: nameEdit.name })
         if (!result?.success) {
             nameEl.value!.innerText = data.value?.me?.name!
         }
@@ -181,7 +180,7 @@ async function startNameEdit() {
 async function startQQEdit() {
     if (qqEdit.active) {
         qqEdit.active = false
-        const result = await doUpdateUserMeta({ qq: qqEdit.name })
+        const result = await updateUserMetaMutation({ qq: qqEdit.name })
         if (!result?.success) {
             nameEl.value!.innerText = data.value?.me?.qq!
         }
@@ -220,7 +219,7 @@ async function startQQEdit() {
             </div>
             <div v-if="user.id" class="flex gap-4">
                 <div class="flex-none">
-                    <QQAvatar :qq="data.me.qq" :name="data.me.name" class="w-24 h-24 shadow-lg rounded-full" />
+                    <QQAvatar v-if="user.qq" :qq="user.qq" :name="user.name!" class="w-24 h-24 shadow-lg rounded-full" />
                 </div>
                 <div class="flex-1 p-2 flex flex-col gap-2">
                     <h1 class="text-2xl font-bold flex gap-2 items-center">
@@ -233,7 +232,7 @@ async function startQQEdit() {
                             :contenteditable="nameEdit.active"
                             >{{ nameEdit.name }}</span
                         >
-                        <span class="select-text px-1" v-else>{{ data.me.name }}</span>
+                        <span class="select-text px-1" v-else>{{ user.name }}</span>
                         <button class="btn btn-ghost btn-square btn-sm" @click="startNameEdit">
                             <Icon v-if="nameEdit.active" icon="la:check-solid" class="size-4" />
                             <Icon v-else icon="la:edit-solid" class="size-4" />
@@ -248,7 +247,7 @@ async function startQQEdit() {
                             :contenteditable="qqEdit.active"
                             >{{ qqEdit.name }}</span
                         >
-                        <span class="select-text px-1" v-else-if="data.me.qq">{{ data.me.qq }}</span>
+                        <span class="select-text px-1" v-else-if="user.qq">{{ user.qq }}</span>
                         <span class="select-text px-1 text-base-content/50" v-else>{{ $t("user.qq") }}</span>
                         <button class="btn btn-ghost btn-square btn-xs" @click="startQQEdit">
                             <Icon v-if="qqEdit.active" icon="la:check-solid" />

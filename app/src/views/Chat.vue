@@ -2,7 +2,7 @@
 import { computed, onBeforeMount, ref } from "vue"
 import { htmlToText } from "../mod/util/html"
 import { useRoute, useRouter } from "vue-router"
-import { useCreateRoomMutation, useDeleteRoomMutation } from "../mod/api/mutation"
+import { createRoomMutation, deleteRoomMutation } from "../mod/api/mutation"
 import { useUserStore } from "../mod/state/user"
 import { t } from "i18next"
 
@@ -54,9 +54,8 @@ interface Room {
     msgs: any[]
 }
 
-const doCreateRoom = useCreateRoomMutation()
 async function createRoom() {
-    const result = await doCreateRoom({ name: newroom.value.trim(), type: newroomType.value })
+    const result = await createRoomMutation({ name: newroom.value.trim(), type: newroomType.value })
     if (result) {
         newroom.value = ""
         await reloadRooms()
@@ -80,9 +79,8 @@ async function reloadRooms() {
 async function enterRoom(room: Room) {
     router.push({ name: "room", params: { room: room.id } })
 }
-const doDeleteRoom = useDeleteRoomMutation()
 async function deleteRoom(room: Room) {
-    if ((await confirm(t("chat.deleteRoomConfirm"))) && (await doDeleteRoom({ id: room.id }))) {
+    if ((await confirm(t("chat.deleteRoomConfirm"))) && (await deleteRoomMutation({ id: room.id }))) {
         await reloadRooms()
     } else {
         alert(t("chat.deleteRoomFailed"))

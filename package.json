@@ -11,6 +11,7 @@
     "build": "npm run build:app && npm run build:server",
     "build:app": "cd app && npm run build",
     "build:server": "cd server && npm run build",
+    "dev": "cd app && npm run dev",
     "dev:app": "cd app && npm run dev",
     "dev:server": "cd server && npm run dev"
   }

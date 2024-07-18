@@ -21,3 +21,6 @@ export async function getUid() {
 export async function setUsd(usk: string, usd: string) {
     return (await invoke("plugin:game|set_usd", { usk, usd })) as void
 }
+export async function autoJoin(uid: string) {
+    return (await invoke("plugin:game|auto_join", { uid })) as void
+}

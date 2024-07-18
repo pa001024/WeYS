@@ -7,7 +7,7 @@ const props = defineProps<{
 }>()
 
 const input = ref<HTMLDivElement>(null as any)
-const model = defineModel()
+const model = defineModel<string>({ default: "" })
 const emit = defineEmits(["loadref", "enter"])
 const imgLoading = ref(false)
 
@@ -40,25 +40,43 @@ function onPaste(e: ClipboardEvent) {
         }
         return
     }
+    // const html = e.clipboardData?.getData("text/html")
     const text = e.clipboardData?.getData("text/plain")
     if (!text) return
+    console.log(text)
     const sel = window.getSelection()!
     const range = sel.getRangeAt(0)
     const node = document.createElement("div")
     node.innerText = text
-    let frag = document.createDocumentFragment()
-    while (node.firstChild) frag.appendChild(node.firstChild)
+    node.innerHTML = node.innerHTML.replace(/ (?: +|$)/g, (s) => "&nbsp;".repeat(s.length))
     range.deleteContents()
-    range.insertNode(frag)
+    range.insertNode(nodeChildFrag(node))
     range.collapse(false)
     model.value = props.mode === "text" ? (e.target as HTMLDivElement).innerText : (e.target as HTMLDivElement).innerHTML
 }
+
+function nodeChildFrag(html: HTMLDivElement) {
+    let frag = document.createDocumentFragment()
+    while (html.firstChild) {
+        const p = html.firstChild
+        frag.appendChild(p)
+    }
+    return frag
+}
+
 function onInput(e: Event) {
     model.value = props.mode === "text" ? (e.target as HTMLDivElement).innerText : (e.target as HTMLDivElement).innerHTML
 }
 onMounted(() => {
-    emit("loadref", input.value)
+    const el = input.value
+    emit("loadref", el)
+    if (props.mode === "text") {
+        el.innerText = model.value
+    } else {
+        el.innerHTML = model.value
+    }
 })
+
 </script>
 
 <template>
@@ -77,8 +95,6 @@ onMounted(() => {
                 dropzone="copy"
                 :placeholder="placeholder"
                 @keydown.enter="emit('enter', $event)"
-                v-html="mode === 'html' && model"
-                v-text="mode === 'text' && model"
             ></div>
         </ScrollArea>
     </div>

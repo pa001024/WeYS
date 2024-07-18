@@ -1,10 +1,11 @@
 import { typeDefs as userSchema, resolvers as userResolvers } from "./user"
 import { typeDefs as messageSchema, resolvers as messageResolvers } from "./message"
 import { typeDefs as roomSchema, resolvers as roomResolvers } from "./room"
+import { typeDefs as taskSchema, resolvers as taskResolvers } from "./task"
 
 export function schemaWith(ctx: any) {
-    const typeDefs = [userSchema, messageSchema, roomSchema]
-    const resolvers = mergeResolvers(userResolvers, messageResolvers, roomResolvers)
+    const typeDefs = [userSchema, messageSchema, roomSchema, taskSchema]
+    const resolvers = mergeResolvers(userResolvers, messageResolvers, roomResolvers, taskResolvers)
 
     function mergeResolvers(...items: any[]) {
         const resolvers = {

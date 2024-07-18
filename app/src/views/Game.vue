@@ -9,9 +9,9 @@ import { FunctionDirective, ref, watchEffect, nextTick, onMounted } from "vue"
 const game = useGameStore()
 const { t } = useTranslation()
 
-const keys = ["path", "beforeGame", "afterGame", "autoLogin"] as const
+const keys = ["path", "beforeGame", "afterGame"] as const
 
-async function select_cmd(key: "path" | "beforeGame" | "afterGame") {
+async function selectPath(key: "path" | "beforeGame" | "afterGame") {
     const result = await dialog.open({
         defaultPath: game[key],
         filters:
@@ -27,7 +27,7 @@ async function select_cmd(key: "path" | "beforeGame" | "afterGame") {
     }
 }
 
-async function clear_accounts() {
+async function clearAccounts() {
     if (await dialog.confirm(t("game.clearAccountsConfirm"))) {
         game.clearAccounts()
     }
@@ -48,12 +48,12 @@ function scrollToCenter(id: number = game.selected) {
     viewNode.children[game.accounts!.findIndex((acc) => acc.id === id)].scrollIntoView({ behavior: "smooth", block: "center" })
 }
 
-async function switch_account(id: number) {
+async function switchAccount(id: number) {
     game.selected = id
     await game.switchAccount(id)
 }
 
-async function import_accounts() {
+async function importAccounts() {
     const select_json = () =>
         new Promise((resolve) => {
             const input = document.createElement("input")
@@ -80,7 +80,7 @@ async function import_accounts() {
     }
 }
 
-function export_accounts() {
+function exportAccounts() {
     const data = game.export_accounts()
     const blob = new Blob([data], { type: "text/json;charset=utf-8" })
 
@@ -99,12 +99,12 @@ watchEffect(() => {
     }
 })
 
-function select_prev(e: PointerEvent) {
+function selectPrev(e: PointerEvent) {
     if (game.selectPrev() && e.button === 2) {
         game.launchGame()
     }
 }
-function select_next(e: PointerEvent) {
+function selectNext(e: PointerEvent) {
     if (game.selectNext() && e.button === 2) {
         game.launchGame()
     }
@@ -124,7 +124,8 @@ const vFocus: FunctionDirective = (el) => {
 }
 onMounted(async () => {
     await nextTick()
-    game.checkCurrentAccount()
+    await game.checkCurrentAccount()
+    await game.addAccountReg()
 })
 function copyUID(uid?: string) {
     if (uid) navigator.clipboard.writeText(uid)
@@ -154,7 +155,7 @@ function copyUID(uid?: string) {
                             <input type="checkbox" v-model="game[`${key}Enable`]" class="checkbox checkbox-primary" />
                             <span class="label-text">{{ $t("game." + key) }}</span>
                         </label>
-                        <div v-if="key !== 'autoLogin'" class="flex flex-1 space-x-2" v-show="game[`${key}Enable`]">
+                        <div class="flex flex-1 space-x-2" v-show="game[`${key}Enable`]">
                             <input
                                 type="text"
                                 disabled
@@ -162,7 +163,7 @@ function copyUID(uid?: string) {
                                 :placeholder="$t('misc.selectPath')"
                                 class="input input-bordered input-sm w-full min-w-32"
                             />
-                            <div class="btn btn-primary btn-sm" @click="select_cmd(key)">{{ $t("misc.select") }}</div>
+                            <div class="btn btn-primary btn-sm" @click="selectPath(key)">{{ $t("misc.select") }}</div>
                         </div>
                     </div>
                     <div
@@ -189,6 +190,25 @@ function copyUID(uid?: string) {
                         </div>
                     </div>
                 </div>
+                <div>
+                    <div class="form-control flex flex-row justify-between items-center flex-wrap">
+                        <label class="label cursor-pointer space-x-2 min-w-32 justify-start">
+                            <input type="checkbox" v-model="game.autoLoginEnable" class="checkbox checkbox-primary" />
+                            <span class="label-text">{{ $t("game.autoLogin") }}</span>
+                        </label>
+                        <div v-if="game.autoLoginEnable" class="flex flex-1 items-center space-x-2">
+                            <span class="text-sm">{{ $t('game.autoSend') }}</span>
+                            <Select v-model="game.autoLoginRoom">
+                                <SelectItem value="-">{{ $t("game.autoLoginRoom") }}</SelectItem>
+                                <GQQuery query="query { rooms { id, name } }" :variables="{}" v-slot="{ data }">
+                                    <SelectItem v-if="data" v-for="item in data.rooms" :key="item.id" :value="item.id">{{
+                                        item.name
+                                    }}</SelectItem>
+                                </GQQuery>
+                            </Select>
+                        </div>
+                    </div>
+                </div>
             </CollapsibleContent>
         </CollapsibleRoot>
 
@@ -204,27 +224,23 @@ function copyUID(uid?: string) {
                 />
             </Tooltip>
             <Tooltip :tooltip="$t('game.clearAccounts')" side="top">
-                <CheckAnimationButton icon="la:broom-solid" @click="clear_accounts" />
+                <CheckAnimationButton icon="la:broom-solid" @click="clearAccounts" />
             </Tooltip>
             <Tooltip :tooltip="$t('game.import')" side="top">
-                <CheckAnimationButton noanimate icon="la:import" @click="import_accounts" />
+                <CheckAnimationButton noanimate icon="la:import" @click="importAccounts" />
             </Tooltip>
             <Tooltip :tooltip="$t('game.export')" side="top">
-                <CheckAnimationButton noanimate icon="la:export" @click="export_accounts" />
+                <CheckAnimationButton noanimate icon="la:export" @click="exportAccounts" />
             </Tooltip>
             <div class="flex-1"></div>
             <Tooltip :tooltip="$t('game.prev')" side="top">
-                <CheckAnimationButton noanimate icon="la:prev" @click="select_prev" @contextmenu.prevent="select_prev" />
+                <CheckAnimationButton icon="la:prev" @click="selectPrev" @contextmenu.prevent="selectPrev" />
             </Tooltip>
             <Tooltip :tooltip="$t('game.next')" side="top">
-                <CheckAnimationButton noanimate icon="la:next" @click="select_next" @contextmenu.prevent="select_next" />
+                <CheckAnimationButton icon="la:next" @click="selectNext" @contextmenu.prevent="selectNext" />
             </Tooltip>
         </div>
         <div class="bg-base-100 p-4 w-full justify-items-center rounded-lg flex-1 flex flex-col overflow-hidden">
-            <!-- <label class="label cursor-pointer space-x-2 group p-1 h-9">
-                <input type="radio" name="radio-10" class="radio radio-secondary radio-sm" value="" v-model="game.selected" />
-                <span class="label-text flex-1 text-ellipsis overflow-hidden">{{ $t("game.justStart") }}</span>
-            </label> -->
             <ScrollArea class="overflow-hidden flex-1" @loadref="(r) => (scrollRef = r)">
                 <div class="label cursor-pointer space-x-2 group h-9" v-for="acc in game.accounts" :key="acc.id">
                     <label class="label space-x-2 p-0">
@@ -284,7 +300,7 @@ function copyUID(uid?: string) {
                             </div>
                         </Tooltip>
                         <Tooltip :tooltip="$t('game.switchTooltip')" side="top">
-                            <div class="btn btn-sm join-item" @click.stop="switch_account(acc.id)">
+                            <div class="btn btn-sm join-item" @click.stop="switchAccount(acc.id)">
                                 <Icon icon="la:exchange-alt-solid" />
                             </div>
                         </Tooltip>

@@ -24,7 +24,7 @@ const emit = defineEmits(["click"])
 </script>
 
 <template>
-    <button v-bind="$props" class="btn btn-sm btn-ghost btn-square text-xl" @click="handler" style="--v: 100%">
+    <button class="btn btn-sm btn-ghost btn-square text-xl hover:text-primary" @click="handler" style="--v: 100%">
         <Icon class="pointer-events-none" style="mask: linear-gradient(to right, #000 var(--v), transparent var(--v))" :icon="icon" />
         <Icon
             class="pointer-events-none absolute text-success"

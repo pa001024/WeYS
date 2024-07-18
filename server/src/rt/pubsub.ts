@@ -1,5 +1,6 @@
 import { createPubSub } from "graphql-yoga"
-import type { msgs, users } from "../db/schema"
+import type { msgs, tasks, users } from "../db/schema"
+
 
 type RoomEvent = {
     newMessage: typeof msgs.$inferSelect
@@ -7,6 +8,8 @@ type RoomEvent = {
     msgEdited: typeof msgs.$inferSelect
     userJoined: typeof users.$inferSelect
     userLeaved: typeof users.$inferSelect
+    newTask: typeof tasks.$inferSelect
+    updateTask: typeof tasks.$inferSelect
 }
 
 // type REvents<T extends Record<string, unknown>, L extends string = keyof T extends string ? keyof T : never> = {

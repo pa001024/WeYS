@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3c821695-16a0-46f8-bedb-eefe00548d69",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "cfaadc69-8da4-4801-9518-90daeb067ff9",
+  "prevId": "3c821695-16a0-46f8-bedb-eefe00548d69",
   "tables": {
     "logins": {
       "name": "logins",
@@ -637,6 +637,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "max_age": {
+          "name": "max_age",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "user_list": {
