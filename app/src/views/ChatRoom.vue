@@ -11,7 +11,7 @@ import { useUserStore } from "../mod/state/user"
 import { useGameStore } from "../mod/state/game"
 import { env } from "../env"
 import { autoJoin } from "../mod/api/game"
-import { copyText } from "../mod/util/copy"
+import { copyContent, copyText, pasteText } from "../mod/util/copy"
 
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
@@ -257,7 +257,7 @@ async function insertImage() {
 }
 
 async function addTask() {
-    const uid = await navigator.clipboard.readText()
+    const uid = await pasteText()
     if (uid.match(/\d{9}/)) {
         await addTaskMutation({
             roomId: roomId.value,
@@ -269,19 +269,39 @@ async function addTask() {
     }
 }
 
+let timerAutoTask = ref(0)
+function startAutoTask() {
+    let lastUID = ""
+    if (timerAutoTask.value) {
+        clearInterval(timerAutoTask.value)
+        timerAutoTask.value = 0
+    } else {
+        timerAutoTask.value = setInterval(async () => {
+            const uid = await pasteText()
+            if (uid.match(/\d{9}/) && lastUID !== uid) {
+                lastUID = uid
+                await addTaskMutation({
+                    roomId: roomId.value,
+                    name: uid,
+                    maxUser: 3,
+                    maxAge: 30,
+                    desc: "软饭",
+                })
+            }
+        }, 100) as unknown as number
+    }
+}
+
 async function endTask(task: Task) {
     await endTaskMutation({ taskId: task.id })
 }
 
 const editId = ref("")
 const editInput = ref<HTMLDivElement[] | null>(null)
-async function editMessage(msgId: string, content: string) {
-    await editMessageMutation({ content, msgId })
-}
 const retractCache = new Map<string, string>()
 async function retractMessage(msg: Msg) {
     retractCache.set(msg.id, msg.content)
-    await editMessage(msg.id, "")
+    await editMessageMutation({ content: "", msgId: msg.id })
     msg.content = ""
 }
 async function restoreMessage(msg: Msg) {
@@ -298,7 +318,7 @@ async function startEdit(msg: Msg) {
         el.onblur = async () => {
             const newVal = sanitizeHTML(el.innerHTML || "")
             if (msg.content === newVal) return
-            await editMessage(editId.value, newVal)
+            await editMessageMutation({ content: newVal, msgId: editId.value })
             msg.content = newVal
             msg.edited = 1
             editId.value = ""
@@ -435,6 +455,14 @@ async function autoJoinGame(task: Task) {
 
                             <template #menu>
                                 <ContextMenuItem
+                                    @click="copyContent(item.content)"
+                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                >
+                                    <Icon class="size-4 mr-2" icon="la:copy-solid" />
+                                    {{ $t("chat.copy") }}
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    v-if="user.id === item.user.id"
                                     @click="retractMessage(item)"
                                     class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
                                 >
@@ -442,6 +470,7 @@ async function autoJoinGame(task: Task) {
                                     {{ $t("chat.revert") }}
                                 </ContextMenuItem>
                                 <ContextMenuItem
+                                    v-if="user.id === item.user.id"
                                     @click="startEdit(item)"
                                     class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
                                 >
@@ -490,7 +519,12 @@ async function autoJoinGame(task: Task) {
                         </div>
                     </Tooltip>
                     <Tooltip side="top" :tooltip="$t('chat.sendTask')">
-                        <CheckAnimationButton icon="la:plus-solid" @click="addTask" />
+                        <CheckAnimationButton
+                            :class="{ 'text-primary': timerAutoTask }"
+                            icon="la:plus-solid"
+                            @click="addTask"
+                            @contextmenu.prevent="startAutoTask"
+                        />
                     </Tooltip>
                     <Tooltip side="top" :tooltip="$t('chat.sound')">
                         <div

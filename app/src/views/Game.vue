@@ -133,17 +133,21 @@ function copyUID(uid?: string) {
 <template>
     <div class="flex flex-col w-full h-full overflow-hidden p-4 space-y-2">
         <CollapsibleRoot class="space-y-2" v-model:open="game.expend">
-            <div class="join w-full">
-                <div v-if="game.running" @click="game.launchGame" class="join-item btn btn-primary btn-disabled flex-1">
-                    {{ $t("game.launched") }}
+            <div class="flex items-center gap-4">
+                <div class="join w-full">
+                    <div v-if="game.running" @click="game.launchGame" class="join-item btn btn-primary btn-disabled px-8 flex-1">
+                        {{ $t("game.launched") }}
+                    </div>
+                    <div v-else @click="game.launchGame" class="join-item btn btn-primary px-8 flex-1">{{ $t("game.launch") }}</div>
+                    <CollapsibleTrigger class="join-item btn btn-primary inline-flex items-center justify-center">
+                        <Transition @enter="spin_y_enter" @leave="spin_y_leave" :css="false">
+                            <Icon icon="radix-icons:chevron-up" v-if="game.expend" class="size-5" />
+                            <Icon icon="radix-icons:chevron-down" v-else class="size-5" />
+                        </Transition>
+                    </CollapsibleTrigger>
                 </div>
-                <div v-else @click="game.launchGame" class="join-item btn btn-primary flex-1">{{ $t("game.launch") }}</div>
-                <CollapsibleTrigger class="join-item btn btn-primary inline-flex items-center justify-center">
-                    <Transition @enter="spin_y_enter" @leave="spin_y_leave" :css="false">
-                        <Icon icon="radix-icons:chevron-up" v-if="game.expend" class="size-5" />
-                        <Icon icon="radix-icons:chevron-down" v-else class="size-5" />
-                    </Transition>
-                </CollapsibleTrigger>
+                <!-- 状态栏 -->
+                <!-- <div v-if="game.autoLoginEnable" class="text-sm">自动登录中...</div> -->
             </div>
 
             <CollapsibleContent class="data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp overflow-hidden">

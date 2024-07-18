@@ -1,4 +1,12 @@
+import { env } from "../../env"
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import { htmlToText } from "./html"
+
 export const copyText = async (text: string) => {
+    if (env.isApp) {
+        await clipboard.writeText(text)
+        return
+    }
     if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text)
         return
@@ -13,4 +21,15 @@ export const copyText = async (text: string) => {
     const result = document.execCommand("copy")
     input.remove()
     if (!result) throw new Error("复制失败")
+}
+
+export const copyContent = async (text: string) => {
+    await copyText(htmlToText(text))
+}
+
+export async function pasteText() {
+    if (env.isApp) {
+        return await clipboard.readText()
+    }
+    return await navigator.clipboard.readText()
 }

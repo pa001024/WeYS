@@ -40,6 +40,7 @@
     "i18next": "^23.11.5",
     "i18next-http-backend": "^2.5.2",
     "i18next-vue": "^4.0.0",
+    "jwt-decode": "^4.0.0",
     "less": "^4.2.0",
     "nanoid": "^5.0.7",
     "onnxruntime-web": "^1.18.0",

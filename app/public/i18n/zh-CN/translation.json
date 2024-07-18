@@ -68,10 +68,11 @@
     "unlimited": "不限制",
     "roomMaxUser": "最大人数",
     "insertImage": "发送图片",
-    "sendTask": "发送UID(剪贴板)",
+    "sendTask": "发送UID(剪贴板)|右键自动发送",
     "chatPlaceholder": "输入聊天内容",
     "sound": "提示音",
-    "autoJoin": "自动加入"
+    "autoJoin": "自动加入",
+    "copy": "复制"
   },
   "user": {
     "title": "用户",

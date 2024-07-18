@@ -3,17 +3,11 @@ import { defineStore } from "pinia"
 import { useObservable } from "@vueuse/rxjs"
 import { liveQuery } from "dexie"
 import { db } from "../db"
+import { jwtDecode } from "jwt-decode"
 
 function getPayload(token: string) {
     if (!token) return
-    function safeParse<T>(s: string) {
-        try {
-            return JSON.parse(atob(s.split(".")[1])) as T
-        } catch (e) {
-            return undefined
-        }
-    }
-    return safeParse<{
+    return jwtDecode<{
         id: string
         name: string
         email: string

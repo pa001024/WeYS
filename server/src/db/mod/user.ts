@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken"
 import type { CreateMobius, Resolver } from "graphql-mobius"
 import { eq } from "drizzle-orm"
-import { nanoid } from "nanoid"
 import { Context, jwtToken } from "../yoga"
 import { db, schema } from ".."
+import { id } from "../schema"
 
 export const typeDefs = /* GraphQL */ `
     type Mutation {
@@ -87,7 +87,7 @@ export const resolvers = {
             const user = (
                 await db
                     .insert(schema.users)
-                    .values({ name, qq, email: `${nanoid()}@guest`, roles: "guest" })
+                    .values({ name, qq, email: `${id()}@guest`, roles: "guest" })
                     .onConflictDoNothing()
                     .returning()
             )[0]
@@ -133,12 +133,12 @@ export const resolvers = {
         updatePassword: async (parent, { old_password, new_password }, context) => {
             if (!old_password) return { success: false, message: "missing old_password" }
             if (!new_password) return { success: false, message: "missing new_password" }
-            if (!context.user || context.user.id.startsWith("g@")) return { success: false, message: "Unauthorized" }
+            if (!context.user) return { success: false, message: "Unauthorized" }
             const user = await db.query.users.findFirst({
                 with: { password: true },
                 where: eq(schema.users.id, context.user.id),
             })
-            if (user) {
+            if (user && user.password) {
                 const isMatch = await Bun.password.verify(old_password, user.password.hash)
                 if (!isMatch) return { success: false, message: "Incorrect password" }
                 const hash = await Bun.password.hash(new_password)

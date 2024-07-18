@@ -147,10 +147,12 @@ export const guestMutation = namedMutation<{
 
 export const updatePasswordMutation = namedMutation<{
     success: boolean
+    token: string
 }>(/* GraphQL */ `
     mutation ($old_password: String!, $new_password: String!) {
         updatePassword(old_password: $old_password, new_password: $new_password) {
             success
+            token
         }
     }
 `)
@@ -158,6 +160,7 @@ export const updatePasswordMutation = namedMutation<{
 export const updateUserMetaMutation = namedMutation<{
     success: boolean
     message: string
+    token: string
     user: {
         id: string
         name: string
@@ -168,6 +171,7 @@ export const updateUserMetaMutation = namedMutation<{
         updateUserMeta(data: { name: $name, qq: $qq }) {
             success
             message
+            token
             user {
                 id
                 name

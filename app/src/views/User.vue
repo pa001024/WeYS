@@ -1,11 +1,10 @@
 <script lang="ts" setup>
 import { useQuery, gql } from "@urql/vue"
-import { computed, nextTick, reactive, ref } from "vue"
+import { nextTick, onMounted, reactive, ref } from "vue"
 import { guestMutation, loginMutation, registerMutation, updatePasswordMutation, updateUserMetaMutation } from "../mod/api/mutation"
 import { t } from "i18next"
 import { useUserStore } from "../mod/state/user"
 import { useRoute, useRouter } from "vue-router"
-import { watch } from "vue"
 const user = useUserStore()
 const route = useRoute()
 const router = useRouter()
@@ -22,17 +21,8 @@ const { data, executeQuery: reloadMe } = useQuery({
             }
         }
     `,
-    requestPolicy: "cache-and-network",
+    requestPolicy: "cache-only",
 })
-
-watch(
-    () => data.value.me,
-    (me) => {
-        if (user.id && !me) {
-            user.logout()
-        }
-    }
-)
 
 const nameEdit = reactive({
     active: false,
@@ -129,17 +119,11 @@ async function updatePassword() {
     })
     if (result?.success) {
         updatePasswordForm.open = false
+        user.token = result.token
     } else {
         updatePasswordForm.error = t("login.updatePasswordFailed")
     }
 }
-
-const needUpdate = computed(() => {
-    if (data.value?.me) {
-        return data.value.me.name !== user.name || data.value.me.qq !== user.qq
-    }
-    return false
-})
 
 function reset(obj: any) {
     for (let key in obj) {
@@ -161,7 +145,9 @@ async function startNameEdit() {
     if (nameEdit.active) {
         nameEdit.active = false
         const result = await updateUserMetaMutation({ name: nameEdit.name })
-        if (!result?.success) {
+        if (result?.success) {
+            user.token = result.token
+        } else {
             nameEl.value!.innerText = data.value?.me?.name!
         }
     } else {
@@ -181,7 +167,9 @@ async function startQQEdit() {
     if (qqEdit.active) {
         qqEdit.active = false
         const result = await updateUserMetaMutation({ qq: qqEdit.name })
-        if (!result?.success) {
+        if (result?.success) {
+            user.token = result.token
+        } else {
             nameEl.value!.innerText = data.value?.me?.qq!
         }
     } else {
@@ -197,6 +185,13 @@ async function startQQEdit() {
         selection.addRange(range)
     }
 }
+
+onMounted(async () => {
+    await reloadMe({ requestPolicy: "network-only" })
+    if (!data.value) {
+        user.logout()
+    }
+})
 </script>
 
 <template>
@@ -445,19 +440,6 @@ async function startQQEdit() {
                                         </div>
                                     </template>
                                 </Dialog>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="form-control" v-if="needUpdate">
-                        <label class="label flex-wrap">
-                            <span class="grow label-text">
-                                {{ $t("setting.change") }}
-                                <div class="text-xs text-base-content/50">{{ $t("setting.syncConfig") }}</div>
-                            </span>
-                            <div class="grow flex justify-between gap-2 min-w-56">
-                                <div class="btn btn-sm grow">
-                                    {{ $t("setting.save") }}
-                                </div>
                             </div>
                         </label>
                     </div>

@@ -303,7 +303,7 @@ export const useGameStore = defineStore("game", {
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 console.log("taskEnded", taskEnded)
                                 if (this.selectNext()) {
-                                    setTimeout(() => this.launchGame(), 1000)
+                                    await this.launchGame()
                                 } else {
                                     await sendMessageMutation({
                                         roomId: this.autoLoginRoom,
