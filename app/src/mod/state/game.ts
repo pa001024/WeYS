@@ -171,6 +171,17 @@ export const useGameStore = defineStore("game", {
             }
         },
 
+        async deleteReg(id: number) {
+            const acc = await db.gameAccounts.get(id)
+            if (acc) {
+                await db.gameAccounts.update(id, (t, ctx) => {
+                    ctx.value.uid = ""
+                    ctx.value.token = ""
+                })
+                console.debug("delete account token", id)
+            }
+        },
+
         async copyUID(id?: number) {
             if (!id) id = this.selected
             const account = await db.gameAccounts.get(id)
@@ -284,14 +295,14 @@ export const useGameStore = defineStore("game", {
                                     roomId: this.autoLoginRoom,
                                     name: uid,
                                     maxUser: 3,
-                                    maxAge: 5,
+                                    maxAge: 15,
                                     desc: "软饭",
                                 })
                                 await autoOpen()
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 console.log("taskEnded", taskEnded)
                                 if (this.selectNext()) {
-                                    this.launchGame()
+                                    setTimeout(() => this.launchGame(), 1000)
                                 } else {
                                     await sendMessageMutation({
                                         roomId: this.autoLoginRoom,

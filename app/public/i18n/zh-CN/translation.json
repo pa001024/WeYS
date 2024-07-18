@@ -25,7 +25,7 @@
     "switchTooltip": "退出当前游戏并切换到该账号",
     "lockTooltip": "锁定当前账号 锁定的账户无法被删除",
     "copyTooltip": "复制账号密码",
-    "deleteTooltip": "删除账号",
+    "deleteTooltip": "删除账号|右键删除注册表信息",
     "addAccountReg": "导入当前登录的账号信息R(注册表)\n右键添加当前注册表中的R账号\n如果选中了P(账号密码)类型的账号\n则会将注册表写到该账号上",
     "accountTypeU": "注册表",
     "accountTypeT": "账号密码",

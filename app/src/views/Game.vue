@@ -290,7 +290,7 @@ function copyUID(uid?: string) {
                             </div>
                         </Tooltip>
                         <Tooltip :tooltip="$t('game.deleteTooltip')" side="top">
-                            <div class="btn btn-sm join-item" @click.stop="game.deleteAccount(acc.id)">
+                            <div class="btn btn-sm join-item" @click.stop="game.deleteAccount(acc.id)" @contextmenu.prevent="game.deleteReg(acc.id)">
                                 <Icon icon="la:trash-alt" />
                             </div>
                         </Tooltip>
