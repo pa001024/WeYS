@@ -146,8 +146,8 @@ useSubscription<{ newTask: Task }>(
         if (data.newTask) {
             // 播放音效
             if (newMsgTip.value) newTaskSound.play()
-            // 自动加入
-            if (newMsgJoin.value) autoJoinGame(data.newTask)
+            // 自动复制
+            if (newMsgJoin.value) copyText(data.newTask.name)
         }
         return data
     }
