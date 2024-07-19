@@ -8,15 +8,24 @@
     "bundle": {
         "active": true,
         "targets": "all",
-        "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ]
     },
     "productName": "weys",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "identifier": "com.weys.app",
     "plugins": {
         "updater": {
+            "createUpdaterArtifacts": true,
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxRjA3MjY5QTU2OTI2OEQKUldTTkptbWxhWEx3c1hpZ3hVQlVjVVlIN3QzVEQxblliVHE1aHNXNU1SOXB6TnljMXJJTEpOYm0K",
-            "endpoints": ["https://gitee.com/pa001024/WeYS/releases/latest/download/latest.json"],
+            "endpoints": [
+                "https://gitee.com/pa001024/WeYS/releases/latest/download/latest.json"
+            ],
             "windows": {
                 "installMode": "passive"
             }

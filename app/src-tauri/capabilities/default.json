@@ -1,68 +1,70 @@
 {
-    "$schema": "../gen/schemas/desktop-schema.json",
-    "identifier": "default",
-    "description": "Capability for the main window",
-    "windows": [
-        "main"
-    ],
-    "permissions": [
-        "path:default",
-        "event:default",
-        "window:default",
-        "app:default",
-        "image:default",
-        "resources:default",
-        "menu:default",
-        "tray:default",
-        "shell:allow-open",
-        "window:allow-set-size",
-        "window:allow-set-title",
-        "window:allow-set-fullscreen",
-        "window:allow-set-always-on-top",
-        "window:allow-start-dragging",
-        "window:allow-minimize",
-        "window:allow-maximize",
-        "window:allow-unmaximize",
-        "window:allow-set-resizable",
-        "window:allow-set-min-size",
-        "process:allow-exit",
-        "dialog:allow-open",
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "path:default",
+    "event:default",
+    "window:default",
+    "app:default",
+    "image:default",
+    "resources:default",
+    "menu:default",
+    "tray:default",
+    "shell:allow-open",
+    "window:allow-set-size",
+    "window:allow-set-title",
+    "window:allow-set-fullscreen",
+    "window:allow-set-always-on-top",
+    "window:allow-start-dragging",
+    "window:allow-minimize",
+    "window:allow-maximize",
+    "window:allow-unmaximize",
+    "window:allow-set-resizable",
+    "window:allow-set-min-size",
+    "process:allow-exit",
+    "dialog:allow-open",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
         {
-            "identifier": "shell:allow-execute",
-            "allow": [
-                {
-                    "name": "cmd",
-                    "cmd": "cmd",
-                    "args": true
-                }
-            ]
-        },
-        "dialog:allow-confirm",
-        "dialog:allow-message",
-        "clipboard-manager:allow-read-text",
-        "clipboard-manager:allow-write-text",
+          "name": "cmd",
+          "cmd": "cmd",
+          "args": true
+        }
+      ]
+    },
+    "dialog:allow-confirm",
+    "dialog:allow-message",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "http:default",
+      "allow": [
         {
-            "identifier": "http:default",
-            "allow": [
-                {
-                    "url": "https://xn--chq26veyq.icu/*"
-                },
-                {
-                    "url": "https://hk4e-sdk.mihoyo.com/*"
-                },
-                {
-                    "url": "https://api-takumi.mihoyo.com/*"
-                }
-            ]
+          "url": "https://xn--chq26veyq.icu/*"
         },
-        "game:allow-kill-game",
-        "game:allow-get-regsk",
-        "game:allow-get-uid",
-        "game:allow-set-usd",
-        "game:allow-set-regsk",
-        "game:allow-auto-join",
-        "game:allow-auto-open",
-        "game:allow-launch-game",
-        "game:allow-get-game"
-    ]
+        {
+          "url": "https://hk4e-sdk.mihoyo.com/*"
+        },
+        {
+          "url": "https://api-takumi.mihoyo.com/*"
+        }
+      ]
+    },
+    "game:allow-kill-game",
+    "game:allow-get-regsk",
+    "game:allow-get-uid",
+    "game:allow-set-usd",
+    "game:allow-set-regsk",
+    "game:allow-auto-join",
+    "game:allow-auto-open",
+    "game:allow-auto-login",
+    "game:allow-launch-game",
+    "game:allow-get-game",
+    "updater:default"
+  ]
 }

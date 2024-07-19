@@ -38,7 +38,8 @@
     "accountConflict": "账号与{{acc}}重复, 确认要添加吗?",
     "autoLogin": "自动登录",
     "autoLoginRoom": "选择房间自动发送UID...",
-    "autoSend": "自动发饭"
+    "autoSend": "自动发饭",
+    "send": "手动发饭"
   },
   "chat": {
     "title": "聊天",

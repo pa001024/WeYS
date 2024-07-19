@@ -10,7 +10,6 @@ import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation
 import { useUserStore } from "../mod/state/user"
 import { useGameStore } from "../mod/state/game"
 import { env } from "../env"
-import { autoJoin } from "../mod/api/game"
 import { copyContent, copyText, pasteText } from "../mod/util/copy"
 
 const route = useRoute()
@@ -18,7 +17,7 @@ const roomId = computed(() => route.params.room as string)
 const user = useUserStore()
 const game = useGameStore()
 const newMsgTip = ref(true)
-const newMsgJoin = ref(false)
+const newMsgJoin = ref(true)
 
 const el = ref<HTMLElement | null>(null)
 
@@ -336,11 +335,11 @@ async function startEdit(msg: Msg) {
 
 async function autoJoinGame(task: Task) {
     if (!task.userList.includes(user.id!)) await joinTaskMutation({ taskId: task.id })
-    if (env.isApp && game.running) {
-        await autoJoin(task.name)
-    } else {
-        await copyText(task.name)
-    }
+    // if (env.isApp && game.running) {
+    //     await autoJoin(task.name)
+    // } else {
+    await copyText(task.name)
+    // }
 }
 </script>
 
@@ -367,14 +366,19 @@ async function autoJoinGame(task: Task) {
                             :key="item"
                             class="flex items-center justify-between gap-2 bg-base-100 shadow-md rounded-md p-4"
                         >
-                            <div class="flex gap-2 items-center">
-                                <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
-                                    item.desc
-                                }}</span>
-                                <span class="select-all">{{ item.name }}</span>
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2">
+                                    <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
+                                        item.desc
+                                    }}</span>
+                                    <span class="select-all">{{ item.name }}</span>
+                                </div>
+                                <div class="text-sm">
+                                    {{ item.user.name }}
+                                </div>
                             </div>
-                            <div class="flex gap-2 items-center">
-                                <span>{{ item.userList.length }} / {{ item.maxUser }}</span>
+                            <div class="flex flex-col gap-2 items-center">
+                                <div class="text-sm">{{ item.userList.length }} / {{ item.maxUser }}</div>
                             </div>
                             <div class="flex-none flex gap-2">
                                 <div class="btn btn-sm btn-primary" @click="endTask(item)">

@@ -94,6 +94,9 @@ pub fn sleep(ms: u32) {
     std::thread::sleep(std::time::Duration::from_millis(ms as u64));
 }
 
+// pub async fn sleep_async(ms: u32) -> tokio::time::Sleep {
+//     tokio::time::sleep(std::time::Duration::from_millis(ms as u64))
+// }
 // pub fn sleepf(s: f64) {
 //     std::thread::sleep(std::time::Duration::from_secs_f64(s));
 // }

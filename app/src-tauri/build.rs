@@ -13,6 +13,7 @@ fn main() {
                 "get_game",
                 "auto_join",
                 "auto_open",
+                "auto_login",
                 "launch_game",
             ]),
         )

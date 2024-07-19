@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tb": "tauri build",
+    "tb": "dotenvx run -- tauri build",
     "gen": "bun src/gen.ts"
   },
   "dependencies": {
@@ -53,6 +53,7 @@
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.6.4",
     "@tauri-apps/cli": "^2.0.0-beta.21",
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^20.14.10",

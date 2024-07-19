@@ -62,7 +62,25 @@ WatchClipboard(data) {
   }
   ToolTip
 }
-
+; Alt+右键缩放窗口
+!RButton::
+{
+  MouseGetPos &oriX, &oriY, &hwnd
+  WinGetPos , , &winX, &winY, hwnd
+  Loop
+  {
+    if !GetKeyState("RButton", "P")
+      break
+    MouseGetPos &x, &y
+    offsetX := x - oriX
+    offsetY := y - oriY
+    toX := (winX + offsetX)
+    toY := (winY + offsetY)
+    WinMove , , toX, toY, hwnd
+    ToolTip Format("({1}, {2})", toX, toY)
+  }
+  ToolTip
+}
 
 #HotIf
 ; 静音当前程序

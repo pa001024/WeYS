@@ -75,6 +75,7 @@ fn apply_material(window: tauri::WebviewWindow, material: &str) -> String {
 pub fn run() {
     // tauri::async_runtime::set(tokio::runtime::Handle::current());
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // .plugin(tauri_plugin_http::init())
         // .plugin(tauri_plugin_notification::init())
         // .plugin(tauri_plugin_os::init())
