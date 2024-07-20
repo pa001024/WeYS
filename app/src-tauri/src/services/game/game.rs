@@ -98,6 +98,7 @@ impl GameControl {
 
     pub fn Click(&self, x: i32, y: i32) {
         let (x, y) = self.toScreenPos(x, y);
+        self.focus();
         click(x, y, 1);
     }
 

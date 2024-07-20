@@ -239,8 +239,10 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, login: String, pwd: String, a
                 ctl.Click(819, 838);
                 // 等待加载完毕
                 println!("等待加载");
-                ctl.WaitColor(51, 85, "4.6.A.", 30.);
-                if ctl.CheckColor(77, 49, "FFFFFF") // 主界面
+                ctl.WaitColor(51, 85, "4.6.A.", 40.);
+                ctl.Sleep(100);
+                let _ = app.emit("game_login", LoginPayload { success: true });
+                if ctl.WaitColor(77, 49, "FFFFFF", 2.) // 主界面
                     && ctl.CheckColor(385, 58, "FFFFFF")
                 // F2为白色
                 {
@@ -259,7 +261,6 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, login: String, pwd: String, a
                         ctl.Sleep(100);
                         ctl.Click(469, 840); // 世界权限
                         println!("登录结束");
-                        let _ = app.emit("game_login", LoginPayload { success: true });
 
                         return;
                     }

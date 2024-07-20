@@ -45,6 +45,35 @@ export const typeDefs = /* GraphQL */ `
         user: User!
     }
 `
+async function checkAndAddTask(roomId: string, userId: string, name: string, maxUser: number, maxAge: number, desc?: string) {
+    // 结束正在进行的任务
+    await db
+        .update(schema.tasks)
+        .set({ endTime: now() })
+        .where(and(eq(schema.tasks.roomId, roomId), isNull(schema.tasks.endTime)))
+
+    const res = (
+        await db
+            .insert(schema.tasks)
+            .values({
+                name,
+                maxUser: maxUser || 3,
+                maxAge,
+                desc,
+                roomId,
+                userId,
+                userList: [],
+            })
+            .returning()
+    )[0]
+    if (res) {
+        const task = await db.query.tasks.findFirst({
+            with: { user: true },
+            where: eq(schema.tasks.id, res.id),
+        })
+        return task
+    }
+}
 
 export const resolvers = {
     Query: {
@@ -74,79 +103,23 @@ export const resolvers = {
     Mutation: {
         addTask: async (parent, { roomId, name, maxUser, maxAge, desc }, { user, pubsub }, info) => {
             if (!user) return null
-            const res = (
-                await db
-                    .insert(schema.tasks)
-                    .values({
-                        name,
-                        maxUser: maxUser || 3,
-                        maxAge,
-                        desc,
-                        roomId,
-                        userId: user.id,
-                        userList: [],
-                    })
-                    .returning()
-            )[0]
-            if (res) {
-                const task = await db.query.tasks.findFirst({
-                    with: { user: true },
-                    where: eq(schema.tasks.id, res.id),
-                })
-                if (task) {
-                    pubsub.publish("newTask", roomId, { newTask: task })
-                    return task
-                }
+            const task = await checkAndAddTask(roomId, user.id, name, maxUser || 3, maxAge || 30, desc)
+            if (task) {
+                pubsub.publish("newTask", roomId, { newTask: task })
+                return task
             }
             return null
         },
         addTaskAsync: async (parent, { roomId, name, maxUser, maxAge, desc }, { user, pubsub }, info) => {
             if (!user) return null
-            const res = (
-                await db
-                    .insert(schema.tasks)
-                    .values({
-                        name,
-                        maxUser: maxUser || 3,
-                        maxAge,
-                        desc,
-                        roomId,
-                        userId: user.id,
-                        userList: [],
-                    })
-                    .returning()
-            )[0]
-            if (res) {
-                const task = await db.query.tasks.findFirst({
-                    with: { user: true },
-                    where: eq(schema.tasks.id, res.id),
-                })
-                if (task) {
-                    pubsub.publish("newTask", roomId, { newTask: task })
-                    const idle = pubsub.subscribe("updateTask", roomId)
-                    while (true) {
-                        const message = await idle.next()
-                        if (message.value.updateTask.id === task.id) {
-                            const task = await db.query.tasks.findFirst({
-                                with: { user: true },
-                                where: eq(schema.tasks.id, res.id),
-                            })
-                            if (task) {
-                                if (task.maxAge)
-                                    setTimeout(async () => {
-                                        const taskNeedEnd = await db.query.tasks.findFirst({
-                                            with: { user: true },
-                                            where: eq(schema.tasks.id, res.id),
-                                        })
-                                        if (taskNeedEnd && !taskNeedEnd.endTime) {
-                                            taskNeedEnd.endTime = now()
-                                            await db.update(schema.tasks).set({ endTime: taskNeedEnd.endTime }).where(eq(schema.tasks.id, taskNeedEnd.id))
-                                            pubsub.publish("updateTask", roomId, { updateTask: taskNeedEnd })
-                                        }
-                                    }, task.maxAge * 1000)
-                                return task
-                            }
-                        }
+            const task = await checkAndAddTask(roomId, user.id, name, maxUser || 3, maxAge || 30, desc)
+            if (task) {
+                pubsub.publish("newTask", roomId, { newTask: task })
+                const idle = pubsub.subscribe("updateTask", roomId)
+                while (true) {
+                    const message = await idle.next()
+                    if (message.value.updateTask.id === task.id) {
+                        return message.value.updateTask
                     }
                 }
             }

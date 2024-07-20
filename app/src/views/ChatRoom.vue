@@ -2,7 +2,7 @@
 import { useTimestamp } from "@vueuse/core"
 import { useScroll } from "@vueuse/core"
 import { useSound } from "@vueuse/sound"
-import { computed, onMounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { isImage, sanitizeHTML } from "../mod/util/html"
 import { gql, useQuery, useSubscription } from "@urql/vue"
 import { useRoute } from "vue-router"
@@ -290,6 +290,10 @@ function startAutoTask() {
         }, 100) as unknown as number
     }
 }
+
+onUnmounted(() => {
+    clearInterval(timerAutoTask.value)
+})
 
 async function endTask(task: Task) {
     await endTaskMutation({ taskId: task.id })
