@@ -54,8 +54,7 @@ const rtcClientsMap = new Map<string, RtcClient[]>()
 
 function addClient(id: string, roomId: string, user: { id: string; name: string; qq?: string }) {
     const clients = rtcClientsMap.get(roomId) || []
-
-    const newRtc = {
+    const newRtc = clients.find((v) => v.id === id) || {
         id,
         end: false,
         user: {

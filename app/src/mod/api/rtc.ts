@@ -9,6 +9,12 @@ export function useRTC(roomId: MaybeRef<string>) {
     const voiceOn = ref(true)
     const micOn = ref(false)
     watch(micOn, (newVal) => client.setMicOn(newVal))
+    if (typeof roomId !== "string") {
+        watch(roomId, (newVal) => {
+            if (client) client.dispose()
+            client = new RTCClient(newVal)
+        })
+    }
 
     return {
         voiceOn,

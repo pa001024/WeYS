@@ -8,7 +8,6 @@ import { gql, useQuery, useSubscription } from "@urql/vue"
 import { useRoute } from "vue-router"
 import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation, sendMessageMutation } from "../mod/api/mutation"
 import { useUserStore } from "../mod/state/user"
-import { useGameStore } from "../mod/state/game"
 import { env } from "../env"
 import { copyContent, copyText, pasteText } from "../mod/util/copy"
 import { useRTC } from "../mod/api/rtc"
@@ -17,7 +16,6 @@ import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut"
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
 const user = useUserStore()
-const game = useGameStore()
 const newMsgTip = ref(true)
 const newMsgJoin = ref(true)
 const keyboardShortcut = ref(false)
@@ -410,7 +408,7 @@ async function autoJoinGame(task: Task) {
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 min-w-24 items-center">
-                                    <div class="text-sm">
+                                    <div class="flex gap-1">
                                         <UserItem v-for="u in item.userList" :key="u" :id="u"></UserItem>
                                     </div>
                                     <div class="text-sm">{{ item.userList.length }} / {{ item.maxUser }}</div>
@@ -419,7 +417,7 @@ async function autoJoinGame(task: Task) {
                                     <div class="btn btn-sm btn-primary" @click="endTask(item)">
                                         {{ $t("task.end") }}
                                     </div>
-                                    <div v-if="env.isApp && game.running" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                    <div v-if="env.isApp" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
                                         {{ $t("task.join") }}
                                     </div>
                                     <div v-else class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
@@ -543,11 +541,11 @@ async function autoJoinGame(task: Task) {
                 :variables="variables"
                 v-slot="{ data }"
             >
-                <div v-if="data" class="flex items-center p-1 gap-2">
+                <div v-if="data" class="flex items-center p-1 gap-1">
                     <div v-for="item in data.rtcClients" :key="item.id" class="flex group bg-primary items-center rounded-full px-1">
                         <QQAvatar class="size-6 my-1" :name="item.user.name" :qq="item.user.qq" />
                         <div
-                            class="flex text-sm text-base-100 max-w-0 group-hover:max-w-24 group-hover:mx-1 overflow-hidden transition-all duration-500"
+                            class="flex text-sm text-base-100 max-w-0 group-hover:max-w-24 group-hover:mx-1 overflow-hidden transition-all duration-500 whitespace-nowrap"
                         >
                             {{ item.user.name }}
                         </div>
@@ -590,7 +588,7 @@ async function autoJoinGame(task: Task) {
                     <Tooltip side="top" :tooltip="$t('chat.sound')">
                         <div
                             class="btn btn-ghost btn-sm btn-square text-xl"
-                            :class="{ ' text-primary': newMsgTip }"
+                            :class="{ 'text-primary': newMsgTip }"
                             @click="newMsgTip = !newMsgTip"
                         >
                             <Icon icon="la:volume-up-solid" />
@@ -599,7 +597,7 @@ async function autoJoinGame(task: Task) {
                     <Tooltip side="top" :tooltip="$t('chat.autoJoin')">
                         <div
                             class="btn btn-ghost btn-sm btn-square text-xl"
-                            :class="{ ' text-primary': newMsgJoin }"
+                            :class="{ 'text-primary': newMsgJoin }"
                             @click="newMsgJoin = !newMsgJoin"
                         >
                             A
@@ -612,7 +610,7 @@ async function autoJoinGame(task: Task) {
                     </Tooltip>
                     <Tooltip v-if="env.isApp" side="top" :tooltip="$t('chat.keyboardShortcut')">
                         <div
-                            class="btn btn-ghost btn-sm text-xl"
+                            class="btn btn-ghost btn-sm btn-square text-xl"
                             :class="{ 'text-primary': keyboardShortcut }"
                             @click="keyboardShortcut = !keyboardShortcut"
                         >
