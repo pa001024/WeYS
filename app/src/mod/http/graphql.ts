@@ -51,6 +51,7 @@ const cacheExchange = offlineExchange({
                 _info
             ) => {
                 const newRtc = result.rtcJoin
+                if (!newRtc) return
                 cache.updateQuery(
                     {
                         query: gql`

@@ -149,6 +149,7 @@ useSubscription<{ newTask: Task }>(
                     name
                     desc
                     maxUser
+                    maxAge
                     userList
                     startTime
                     endTime
@@ -383,7 +384,7 @@ async function autoJoinGame(task: Task) {
                     <GQQuery
                         :query="`query ($roomId: String!) {
     doingTasks(roomId: $roomId) {
-        id,name,desc,maxUser,maxAge,userList,startTime,endTime,roomId,userId,createdAt,updateAt,user {id,name,qq}
+        id,name,desc,maxUser,maxAge,userList,startTime,endTime,createdAt,updateAt,user { id, name, qq }
     }
 }`"
                         :variables="variables"
