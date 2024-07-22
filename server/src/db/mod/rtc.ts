@@ -51,6 +51,7 @@ export const typeDefs = /* GraphQL */ `
 `
 
 const rtcClientsMap = new Map<string, RtcClient[]>()
+const userRoomMap = new Map<string, string>()
 
 function addClient(id: string, roomId: string, user: { id: string; name: string; qq?: string }) {
     const clients = rtcClientsMap.get(roomId) || []
@@ -63,6 +64,7 @@ function addClient(id: string, roomId: string, user: { id: string; name: string;
             qq: user.qq,
         },
     }
+    userRoomMap.set(user.id, roomId)
     rtcClientsMap.set(roomId, [...clients, newRtc])
     return newRtc
 }
@@ -124,13 +126,21 @@ export const resolvers = {
             if (!user) throw new Error("need login")
             const socket = extra?.socket
             if (socket) {
-                const newRtc = addClient(socket.data.id, roomId, user)
-                pubsub.publish("newRtc", roomId, { newRtc })
-                const oldclose = socket.data.close
-                socket.data.close = async (ws) => {
-                    oldclose?.(ws)
-                    const newRtc = removeClient(socket.data.id, roomId, user)
+                if (!getId(roomId, user.id)) {
+                    const oldRoom = userRoomMap.get(user.id)
+                    if (oldRoom) {
+                        // console.log("remove", oldRoom)
+                        const oldRtc = removeClient(socket.data.id, oldRoom, user)
+                        pubsub.publish("newRtc", oldRoom, { newRtc: oldRtc })
+                    }
+                    const newRtc = addClient(socket.data.id, roomId, user)
                     pubsub.publish("newRtc", roomId, { newRtc })
+                    const oldclose = socket.data.close
+                    socket.data.close = async (ws) => {
+                        oldclose?.(ws)
+                        const newRtc = removeClient(socket.data.id, roomId, user)
+                        pubsub.publish("newRtc", roomId, { newRtc })
+                    }
                 }
             }
             return pubsub.subscribe("newRtc", roomId)

@@ -52,7 +52,11 @@ const cacheExchange = offlineExchange({
             ) => {
                 const newRtc = result.rtcJoin
                 if (!newRtc) return
-                cache.updateQuery(
+                cache.updateQuery<{
+                    rtcClients: {
+                        id: string
+                    }[]
+                }>(
                     {
                         query: gql`
                             query ($roomId: String!) {
@@ -70,8 +74,8 @@ const cacheExchange = offlineExchange({
                         variables: { roomId: args.roomId },
                     },
                     (data) => {
-                        if (!data) return { rtcClients: [newRtc] }
-                        if (data.rtcClients.find((v: any) => v.id !== newRtc.id)) {
+                        if (!data) return { rtcClients: [] }
+                        if (data.rtcClients.some((v) => v.id !== newRtc.id)) {
                             data.rtcClients.push(newRtc)
                         }
                         return data
@@ -83,7 +87,11 @@ const cacheExchange = offlineExchange({
             newRtc(result: { newRtc: { id: string; end: boolean; user: { id: string; name: string; qq: string } } }, args, cache, _info) {
                 const newRtc = result.newRtc
 
-                cache.updateQuery(
+                cache.updateQuery<{
+                    rtcClients: {
+                        id: string
+                    }[]
+                }>(
                     {
                         query: gql`
                             query ($roomId: String!) {
@@ -106,8 +114,11 @@ const cacheExchange = offlineExchange({
                             data.rtcClients = data.rtcClients.filter((v: any) => v.id !== newRtc.id)
                         } else {
                             if (!data) return { rtcClients: [newRtc] }
-                            data.rtcClients.push(newRtc)
+                            if (data.rtcClients.some((v) => v.id !== newRtc.id)) {
+                                data.rtcClients.push(newRtc)
+                            }
                         }
+                        console.log("newRtc", data)
                         return data
                     }
                 )

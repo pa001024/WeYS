@@ -175,7 +175,7 @@ onBeforeMount(() => {
                             </div>
                             <!-- 最新消息 -->
                             <div class="flex justify-between group-[.active]:text-base-100 text-base-content/50 space-x-4">
-                                <div v-if="r.lastMsg" class="whitespace-nowrap text-xs flex-1 overflow-hidden text-ellipsis">
+                                <div v-if="r.lastMsg" class="whitespace-nowrap max-w-36 text-xs flex-1 overflow-hidden text-ellipsis">
                                     {{ r.lastMsg.user.name }}: {{ htmlToText(r.lastMsg.content) }}
                                 </div>
                                 <div

@@ -14,6 +14,7 @@ import { copyText, pasteText } from "../util/copy"
 import { gqClient } from "../http/graphql"
 import { gql } from "@urql/vue"
 import { nanoid } from "nanoid"
+import { pipe } from "rxjs"
 
 function hash(s: string) {
     return enc.Hex.stringify(SHA1(s))
@@ -137,10 +138,15 @@ if (env.isApp) {
                             }
                         }
                     })()
+
+                    const lid = game.launchId
+
                     const sub = gqClient
                         .subscription<{
-                            id: string
-                            endTime: string
+                            updateTask: {
+                                id: string
+                                endTime: string
+                            }
                         }>(
                             gql`
                                 subscription ($roomId: String!) {
@@ -150,16 +156,21 @@ if (env.isApp) {
                                     }
                                 }
                             `,
-                            {}
+                            { roomId: game.autoLoginRoom }
                         )
                         .subscribe(async (e) => {
-                            if (!e.data || e.data.id !== taskEnded.id) return
+                            const ev = e.data?.updateTask
+                            if (!ev || ev.id !== taskEnded.id) return
                             // 已结束或不需要等待结束
-                            if (e.data.endTime || !game.autoLoginOnlyEnd) {
+                            if (lid !== game.launchId) {
+                                sub.unsubscribe()
+                                return
+                            }
+                            console.debug("opendoor subscribe", e)
+                            if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
                                 await opendoor()
                                 await new Promise((resolve) => setTimeout(resolve, 500))
-                                console.log("taskEnded", taskEnded)
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
                             } else if (game.autoLoginOnlyEnd) {

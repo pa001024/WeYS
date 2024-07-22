@@ -95,7 +95,7 @@ export class RTCClient {
                 if (!data.newRtcEvent) return data
                 const ev = data.newRtcEvent
                 if (this.clientId === ev.to) {
-                    console.log("[rtc] newRtcEvent", ev)
+                    // console.log("[rtc] newRtcEvent", ev)
                     this.emitter.emit(ev.type, JSON.parse(ev.body))
                 }
                 return data
@@ -240,7 +240,7 @@ class RTCConnection {
             if (event.candidate) this.send("candidate", event.candidate)
         }
         this.pc.ontrack = (event) => {
-            console.log("[rtc] track")
+            // console.log("[rtc] track")
 
             const stream = event.streams[0]
             const audio = new Audio()
