@@ -1,15 +1,13 @@
 import type { CreateMobius, Resolver } from "graphql-mobius"
 import { db, schema } from ".."
 import { Context } from "../yoga"
-import { and, desc, eq, getTableColumns, like, sql } from "drizzle-orm"
+import { desc, eq, getTableColumns, like, sql } from "drizzle-orm"
 import { getSubSelection } from "."
 
 export const typeDefs = /* GraphQL */ `
     type Mutation {
         createRoom(data: RoomsCreateInput!): Room
         deleteRoom(id: String!): Boolean!
-        enterRoom(id: String!): Boolean!
-        exitRoom(id: String!): Boolean!
     }
 
     type Query {
@@ -137,39 +135,6 @@ export const resolvers = {
             })
             if (room && room.ownerId === user.id) {
                 await db.delete(schema.rooms).where(eq(schema.rooms.id, id)).execute()
-                return true
-            }
-            return false
-        },
-        enterRoom: async (parent, { id }, { user, pubsub }, info) => {
-            if (!user) return false
-            const room = await db.query.rooms.findFirst({
-                where: eq(schema.rooms.id, id),
-            })
-            const roomViews = await db.query.roomViews.findMany({
-                where: and(eq(schema.roomViews.roomId, id), eq(schema.roomViews.status, "online")),
-            })
-            if (room && (!room.maxUsers || room.maxUsers > roomViews.length)) {
-                await db
-                    .insert(schema.roomViews)
-                    .values({
-                        roomId: id,
-                        userId: user.id,
-                        status: "online",
-                    })
-                    .onConflictDoUpdate({ target: schema.roomViews.id, set: { status: "online" } })
-                    .execute()
-                return true
-            }
-            return false
-        },
-        exitRoom: async (parent, { id }, { user, pubsub }, info) => {
-            if (!user) return false
-            const roomViews = await db.query.roomViews.findFirst({
-                where: and(eq(schema.roomViews.roomId, id), eq(schema.roomViews.userId, user.id), eq(schema.roomViews.status, "online")),
-            })
-            if (roomViews) {
-                await db.update(schema.roomViews).set({ status: "exited" }).where(eq(schema.roomViews.id, roomViews.id)).execute()
                 return true
             }
             return false

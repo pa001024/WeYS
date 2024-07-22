@@ -1,17 +1,19 @@
 import { useLocalStorage } from "@vueuse/core"
 import { defineStore } from "pinia"
 import * as shell from "@tauri-apps/plugin-shell"
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
 import * as event from "@tauri-apps/api/event"
 import { SHA1, enc } from "crypto-js"
 import { env } from "../../env"
-import { autoLogin, autoOpen, getGame, getRegsk, getUid, launchGame, setRegsk, setUsd } from "../api/game"
+import { autoLogin, autoOpen, autoSetup, getGame, getRegsk, getUid, launchGame, setRegsk, setUsd } from "../api/game"
 import { db, GameAccount } from "../db"
 import { useObservable } from "@vueuse/rxjs"
 import { liveQuery } from "dexie"
 import { t } from "i18next"
-import { addTaskAsyncMutation, sendMessageMutation } from "../api/mutation"
-import { copyText } from "../util/copy"
+import { addTaskAsyncMutation, addTaskMutation, sendMessageMutation } from "../api/mutation"
+import { copyText, pasteText } from "../util/copy"
+import { gqClient } from "../http/graphql"
+import { gql } from "@urql/vue"
+import { nanoid } from "nanoid"
 
 function hash(s: string) {
     return enc.Hex.stringify(SHA1(s))
@@ -62,54 +64,113 @@ if (env.isApp) {
     setTimeout(async () => {
         const game = useGameStore()
 
-        await event.listen("game_login", async (e) => {
+        // await setHotkey("R")
+
+        await event.listen<{ id: string; success: boolean }>("game_start", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            if (e.payload.success) {
+                console.log("game start")
+                if (!game.autoLoginEnable) return
+                const acc = await game.getCurrent()
+                if (acc) {
+                    game.state = "开始自动登录"
+                    await autoLogin(game.launchId, acc.login, acc.pwd)
+                }
+            } else {
+                game.state = "启动失败"
+            }
+        })
+        await event.listen<{ id: string; success: boolean }>("game_init", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            console.log("game init")
+            game.state = "游戏启动成功"
+        })
+        await event.listen<{ id: string; success: boolean }>("game_input", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            console.log("game input")
+            game.state = "需输入密码"
+        })
+        await event.listen<{ id: string; success: boolean }>("game_ready", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            console.log("game ready")
+            game.state = "游戏已就绪 点击进入"
+        })
+        await event.listen<{ id: string; success: boolean }>("game_enter", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            if (e.payload.success) {
+                console.log("game enter (addAccountReg)")
+                await game.addAccountReg()
+                if (!game.autoLoginEnable) return
+                const acc = await game.getCurrent()
+                if (acc) {
+                    game.state = "开始设置世界权限"
+                    await autoSetup(game.launchId, game.autoLoginRoom !== "-")
+                }
+            } else {
+                game.state = "检测失败 请手动点击加号"
+                if (game.autoLoginTryNext) game.tryNext()
+            }
+        })
+        await event.listen<{ id: string; success: boolean }>("game_login", async (e) => {
+            if (e.payload.id !== game.launchId) return
             if (!game.autoLoginEnable) return
             const payload = e.payload as { success: boolean }
-            console.log("game_login", payload.success)
+            console.log("game login", payload.success)
             if (payload.success) {
-                await game.addAccountReg()
                 const uid = await game.copyUID()
                 game.state = "登录成功 已复制UID"
                 if (game.autoLoginRoom !== "-" && uid) {
-                    const taskEnded = await addTaskAsyncMutation({
+                    const taskEnded = await addTaskMutation({
                         roomId: game.autoLoginRoom,
                         name: uid,
                         maxUser: 3,
                         maxAge: 15,
                         desc: "软饭",
                     })
-                    game.state = "自动设置世界权限"
-                    await autoOpen()
-                    await new Promise((resolve) => setTimeout(resolve, 500))
-                    console.log("taskEnded", taskEnded)
-                    if (game.selectNext()) {
-                        game.state = "开始下一个账号"
-                        await game.launchGame()
-                    } else {
-                        await sendMessageMutation({
-                            roomId: game.autoLoginRoom,
-                            content: "饭发完了",
+                    const opendoor = (() => {
+                        let opend = false
+                        return async () => {
+                            if (!opend) {
+                                opend = true
+                                game.state = "自动设置世界权限"
+                                await autoOpen()
+                            }
+                        }
+                    })()
+                    const sub = gqClient
+                        .subscription<{
+                            id: string
+                            endTime: string
+                        }>(
+                            gql`
+                                subscription ($roomId: String!) {
+                                    updateTask(roomId: $roomId) {
+                                        id
+                                        endTime
+                                    }
+                                }
+                            `,
+                            {}
+                        )
+                        .subscribe(async (e) => {
+                            if (!e.data || e.data.id !== taskEnded.id) return
+                            // 已结束或不需要等待结束
+                            if (e.data.endTime || !game.autoLoginOnlyEnd) {
+                                sub.unsubscribe()
+                                await opendoor()
+                                await new Promise((resolve) => setTimeout(resolve, 500))
+                                console.log("taskEnded", taskEnded)
+                                game.tryNext()
+                                // 发生变更 进行开门 但不结束等待
+                            } else if (game.autoLoginOnlyEnd) {
+                                await opendoor()
+                            }
                         })
-                    }
                 }
             } else {
                 game.state = "登录失败 请检查配置"
+                if (game.autoLoginTryNext) game.tryNext()
             }
-        })
-
-        await event.listen("game_enter", async (e) => {
-            console.log("game enter")
-            if (!game.autoLoginEnable) return
-            const acc = await game.getCurrent()
-            if (acc) {
-                game.state = "开始自动登录"
-                await autoLogin(game.autoLoginRoom !== "-", acc.login, acc.pwd)
-            }
-        })
-
-        await event.listen("game_init", async (e) => {
-            game.state = "游戏启动成功"
-            console.log("game init")
         })
     }, 1e3)
 }
@@ -121,7 +182,10 @@ export const useGameStore = defineStore("game", {
             beforeGameEnable: useLocalStorage("game_before_enable", false),
             afterGameEnable: useLocalStorage("game_after_enable", false),
             autoLoginEnable: useLocalStorage("game_auto_login_enable", false),
+            autoLoginTryNext: useLocalStorage("game_auto_login_try_next", true),
+            autoLoginOnlyEnd: useLocalStorage("game_auto_login_only_end", false),
             autoLoginRoom: useLocalStorage("game_auto_login_room", "-"),
+            nextSho: useLocalStorage("game_auto_login_room", "-"),
             path: useLocalStorage("game_path", ""),
             beforeGame: useLocalStorage("game_before", ""),
             afterGame: useLocalStorage("game_after", ""),
@@ -134,6 +198,7 @@ export const useGameStore = defineStore("game", {
             liveDiff: useLocalStorage("game_live_diff", 0),
             selected: 0,
             running: false,
+            launchId: "",
             state: "",
             expend: useLocalStorage("game_expend", false),
         }
@@ -151,6 +216,17 @@ export const useGameStore = defineStore("game", {
             if (!next) return false
             this.selected = next
             return true
+        },
+        async tryNext() {
+            if (this.selectNext()) {
+                this.state = "开始下一个账号"
+                await this.launchGame()
+            } else {
+                await sendMessageMutation({
+                    roomId: this.autoLoginRoom,
+                    content: "饭发完了",
+                })
+            }
         },
         /** 选择下一个 */
         selectNext() {
@@ -268,7 +344,7 @@ export const useGameStore = defineStore("game", {
             const account = await db.gameAccounts.get(id)
             if (account) {
                 if (account.uid) {
-                    clipboard.writeText(`${account.uid}`)
+                    copyText(`${account.uid}`)
                     return account.uid
                 }
             }
@@ -278,9 +354,9 @@ export const useGameStore = defineStore("game", {
             const account = await db.gameAccounts.get(id)
             if (account) {
                 if (account.uid) {
-                    clipboard.writeText(`${account.uid}----${account.login}----${account.pwd}`)
+                    copyText(`${account.uid}----${account.login}----${account.pwd}`)
                 } else {
-                    clipboard.writeText(`${account.login}----${account.pwd}`)
+                    copyText(`${account.login}----${account.pwd}`)
                 }
             }
         },
@@ -335,12 +411,13 @@ export const useGameStore = defineStore("game", {
         },
 
         async importAccountsFromCliboard() {
-            const text = await clipboard.readText()
+            const text = await pasteText()
             const added = this.addAccounts(...text.split("\n"))
             return added
         },
 
         async launchGame() {
+            this.launchId = nanoid(10)
             // if (this.running) await killGame()
             const account = this.selected ? await db.gameAccounts.get(this.selected) : null
             if (account) {
@@ -355,6 +432,7 @@ export const useGameStore = defineStore("game", {
             if (this.path && this.pathEnable) {
                 console.log("game start")
                 await launchGame(
+                    this.launchId,
                     this.path,
                     this.autoLoginEnable
                         ? "-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE"

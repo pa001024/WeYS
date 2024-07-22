@@ -63,8 +63,17 @@
     "game:allow-auto-join",
     "game:allow-auto-open",
     "game:allow-auto-login",
+    "game:allow-auto-setup",
     "game:allow-launch-game",
     "game:allow-get-game",
-    "updater:default"
+    "game:allow-set-hotkey",
+    "game:allow-is-ingame",
+    "game:default",
+    "updater:default",
+    "global-shortcut:default",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all"
   ]
 }

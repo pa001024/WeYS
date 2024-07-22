@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use std::{ffi::c_void, mem::size_of, ptr};
 
+// use crossbeam_channel::{unbounded, Receiver, Sender};
+// use once_cell::sync::{Lazy, OnceCell};
 use regex::Regex;
 use windows_sys::Win32::{
     Foundation::*,
@@ -333,6 +335,15 @@ pub(crate) fn get_process_by_name(name: &str) -> Result<u32, Win32Error> {
     return Ok(0);
 }
 
+pub(crate) fn get_window_by_process_name(name: &str) -> Option<HWND> {
+    if let Ok(pid) = get_process_by_name(name) {
+        if let Some(hwnd) = get_window_by_process(pid) {
+            return Some(hwnd);
+        }
+    }
+    None
+}
+
 pub(crate) fn kill_process(pid: u32) -> Result<bool, Win32Error> {
     unsafe {
         let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
@@ -485,30 +496,31 @@ lazy_static! {
     static ref DC_CACHE: Mutex<HDC> = Mutex::new(HDC::default());
 }
 
-pub fn save_dc() {
+pub fn save_dc(hwnd: HWND) {
     unsafe {
-        let hdc = GetDC(0);
+        // If the function succeeds, the return value is a handle to the DC for the specified window's client area.
+        let hdc = GetDC(hwnd);
         let mut dc_cache = DC_CACHE.lock().unwrap();
-        ReleaseDC(0, *dc_cache);
+        ReleaseDC(hwnd, *dc_cache);
         *dc_cache = hdc;
     }
 }
 
-pub fn free_dc() {
+pub fn free_dc(hwnd: HWND) {
     unsafe {
         let mut dc_cache = DC_CACHE.lock().unwrap();
         if !(*dc_cache) == 0 {
-            ReleaseDC(0, *dc_cache);
+            ReleaseDC(hwnd, *dc_cache);
         }
         *dc_cache = HDC::default();
     }
 }
 
-pub fn get_color(x: i32, y: i32) -> u32 {
+pub fn get_color(hwnd: HWND, x: i32, y: i32) -> u32 {
     unsafe {
-        let hdc = GetDC(0);
+        let hdc = GetDC(hwnd);
         let ret = GetPixel(hdc, x, y);
-        ReleaseDC(0, hdc);
+        ReleaseDC(hwnd, hdc);
         ret
     }
 }
@@ -521,8 +533,8 @@ pub fn get_color_batch(x: i32, y: i32) -> u32 {
     }
 }
 
-pub fn check_color_regex(x: i32, y: i32, pattern: &str) -> bool {
-    let pixel = get_color(x, y);
+pub fn check_color_regex(hwnd: HWND, x: i32, y: i32, pattern: &str) -> bool {
+    let pixel = get_color(hwnd, x, y);
     check_color_raw(pixel, pattern)
 }
 
@@ -710,3 +722,98 @@ pub(crate) fn get_window_rect(hwnd: HWND) -> Option<RECT> {
         }
     }
 }
+
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+// pub enum HotKeyState {
+//     /// The [`HotKey`] is pressed (the key is down).
+//     Pressed,
+//     /// The [`HotKey`] is released (the key is up).
+//     Released,
+// }
+
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+// pub struct GlobalHotKeyEvent {
+//     /// Id of the associated [`HotKey`].
+//     pub id: u32,
+//     /// State of the associated [`HotKey`].
+//     pub state: HotKeyState,
+// }
+
+// pub type GlobalHotKeyEventReceiver = Receiver<GlobalHotKeyEvent>;
+// type GlobalHotKeyEventHandler = Box<dyn Fn(GlobalHotKeyEvent) + Send + Sync + 'static>;
+
+// static GLOBAL_HOTKEY_CHANNEL: Lazy<(Sender<GlobalHotKeyEvent>, GlobalHotKeyEventReceiver)> =
+//     Lazy::new(unbounded);
+// static GLOBAL_HOTKEY_EVENT_HANDLER: OnceCell<Option<GlobalHotKeyEventHandler>> = OnceCell::new();
+
+// impl GlobalHotKeyEvent {
+//     /// Returns the id of the associated [`HotKey`].
+//     pub fn id(&self) -> u32 {
+//         self.id
+//     }
+//     /// Returns the state of the associated [`HotKey`].
+
+//     pub fn state(&self) -> HotKeyState {
+//         self.state
+//     }
+
+//     /// Gets a reference to the event channel's [`GlobalHotKeyEventReceiver`]
+//     /// which can be used to listen for global hotkey events.
+//     ///
+//     /// ## Note
+//     ///
+//     /// This will not receive any events if [`GlobalHotKeyEvent::set_event_handler`] has been called with a `Some` value.
+//     pub fn receiver<'a>() -> &'a GlobalHotKeyEventReceiver {
+//         &GLOBAL_HOTKEY_CHANNEL.1
+//     }
+
+//     /// Set a handler to be called for new events. Useful for implementing custom event sender.
+//     ///
+//     /// ## Note
+//     ///
+//     /// Calling this function with a `Some` value,
+//     /// will not send new events to the channel associated with [`GlobalHotKeyEvent::receiver`]
+//     pub fn set_event_handler<F: Fn(GlobalHotKeyEvent) + Send + Sync + 'static>(f: Option<F>) {
+//         if let Some(f) = f {
+//             let _ = GLOBAL_HOTKEY_EVENT_HANDLER.set(Some(Box::new(f)));
+//         } else {
+//             let _ = GLOBAL_HOTKEY_EVENT_HANDLER.set(None);
+//         }
+//     }
+
+//     pub(crate) fn send(event: GlobalHotKeyEvent) {
+//         if let Some(handler) = GLOBAL_HOTKEY_EVENT_HANDLER.get_or_init(|| None) {
+//             handler(event);
+//         } else {
+//             let _ = GLOBAL_HOTKEY_CHANNEL.0.send(event);
+//         }
+//     }
+// }
+
+// pub(crate) fn set_keyboard_hook(proc: KeyboardProc) -> HHOOK {
+//     unsafe { SetWindowsHookExA(WH_KEYBOARD_LL, Some(proc), 0, 0) }
+// }
+
+// pub(crate) fn del_keyboard_hook(hookid: HHOOK) -> bool {
+//     unsafe { UnhookWindowsHookEx(hookid) != 0 }
+// }
+// // 钩子函数原型
+// type KeyboardProc = unsafe extern "system" fn(ncode: i32, wparam: WPARAM, lparam: LPARAM) -> isize;
+// // 钩子函数
+// pub unsafe extern "system" fn keyboard_hook(ncode: i32, wparam: WPARAM, lparam: LPARAM) -> isize {
+//     if ncode >= 0 {
+//         // 这里可以访问 KBDLLHOOKSTRUCT 结构体中的键盘信息
+//         let hook_struct = lparam as *const KBDLLHOOKSTRUCT;
+//         // 例如，获取虚拟键码
+//         let vk_code = (*hook_struct).vkCode;
+//         let scan_code = (*hook_struct).scanCode;
+//         let flags = (*hook_struct).flags;
+//         let extra_info = (*hook_struct).dwExtraInfo;
+//         println!(
+//             "Virtual Key Code: {}, Scan Code: {}, Flags: {}, Extra Info: {}",
+//             vk_code, scan_code, flags, extra_info
+//         );
+//         // 这里可以处理键盘事件
+//     }
+//     CallNextHookEx(0, ncode, wparam, lparam)
+// }

@@ -6,6 +6,7 @@ import { useGraphQlJit } from "@envelop/graphql-jit"
 import { schemaWith } from "./mod"
 import { makeHandler as makeWSHandler } from "graphql-ws/lib/use/bun"
 import { pubsub } from "../rt/pubsub"
+import type { ServerWebSocket } from "bun"
 
 export const genSchema = () => {
     const { typeDefs, resolvers } = schemaWith({})
@@ -21,6 +22,17 @@ export type Context = YogaInitialContext & CustomContext
 export type CustomContext = {
     user?: JWTUser
     pubsub: typeof pubsub
+    extra?: {
+        socket: ServerWebSocket<{
+            validator: any
+            open: (ws: ServerWebSocket) => any
+            message: (ws: ServerWebSocket) => any
+            drain: (ws: ServerWebSocket) => any
+            close: (ws: ServerWebSocket) => any
+            id: string
+            userId: string
+        }>
+    }
 }
 
 export interface JWTUser {

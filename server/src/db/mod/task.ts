@@ -14,8 +14,10 @@ export const typeDefs = /* GraphQL */ `
     type Mutation {
         "添加任务"
         addTask(roomId: String!, name: String!, maxUser: Int, maxAge: Int, desc: String): Task
-        "异步添加任务等待结束"
+        "异步添加任务等待变更"
         addTaskAsync(roomId: String!, name: String!, maxUser: Int, maxAge: Int, desc: String): Task
+        "异步添加任务等待结束"
+        addTaskEndAsync(roomId: String!, name: String!, maxUser: Int, maxAge: Int, desc: String): Task
         "加入任务"
         joinTask(taskId: String!): Boolean!
         "结束任务"
@@ -119,6 +121,21 @@ export const resolvers = {
                 while (true) {
                     const message = await idle.next()
                     if (message.value.updateTask.id === task.id) {
+                        return message.value.updateTask
+                    }
+                }
+            }
+            return null
+        },
+        addTaskEndAsync: async (parent, { roomId, name, maxUser, maxAge, desc }, { user, pubsub }, info) => {
+            if (!user) return null
+            const task = await checkAndAddTask(roomId, user.id, name, maxUser || 3, maxAge || 30, desc)
+            if (task) {
+                pubsub.publish("newTask", roomId, { newTask: task })
+                const idle = pubsub.subscribe("updateTask", roomId)
+                while (true) {
+                    const message = await idle.next()
+                    if (message.value.updateTask.id === task.id && message.value.updateTask.endTime) {
                         return message.value.updateTask
                     }
                 }

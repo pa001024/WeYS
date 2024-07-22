@@ -15,7 +15,7 @@ pub struct GameControl {
 #[allow(non_snake_case, unused)]
 impl GameControl {
     pub fn new(hwnd: HWND) -> Self {
-        set_foreground_window(hwnd);
+        // set_foreground_window(hwnd);
         let mut rect = unsafe { zeroed::<RECT>() };
         let _ = unsafe { GetClientRect(hwnd, &mut rect) };
         let mut point = unsafe { zeroed::<POINT>() };
@@ -73,13 +73,15 @@ impl GameControl {
     fn savePos(&self, restore: bool) {
         static mut MX: i32 = 0;
         static mut MY: i32 = 0;
-        if restore {
-            click(unsafe { MX }, unsafe { MY }, 0);
-        } else {
-            let pos = self.MouseGetPos();
-            unsafe {
-                MX = pos[0];
-                MY = pos[1];
+        unsafe {
+            if restore {
+                click(MX, MY, 0);
+            } else {
+                let mut point = unsafe { zeroed::<POINT>() };
+                GetCursorPos(&mut point);
+
+                MX = point.x;
+                MY = point.y;
             }
         }
     }
@@ -104,37 +106,65 @@ impl GameControl {
 
     // 后台点击
     pub fn PostClick(&self, x: i32, y: i32) {
-        let (x, y) = self.toScreenPos(x, y);
-        self.SavePos();
-        self.Click(x, y);
-        self.RestorePos();
+        // let (x, y) = self.toScreenPos(x, y);
+        let mut point = POINT { x, y };
+        unsafe {
+            self.SavePos();
+            self.MouseMove(x, y);
+            PostMessageA(self.hwnd, WM_MOUSEMOVE, 0, &mut point as *mut _ as isize);
+            PostMessageA(self.hwnd, WM_LBUTTONDOWN, 1, &mut point as *mut _ as isize);
+            self.Sleep(20);
+            PostMessageA(self.hwnd, WM_LBUTTONUP, 1, &mut point as *mut _ as isize);
+            self.Sleep(20);
+            self.RestorePos();
+        }
+        // self.SavePos();
+        // self.Click(x, y);
+    }
+
+    // 后台点击 不移动鼠标
+    pub fn PostClickLazy(&self, x: i32, y: i32) {
+        // let (x, y) = self.toScreenPos(x, y);
+        let mut point = POINT { x, y };
+        unsafe {
+            // self.SavePos();
+            // self.MouseMove(x, y);
+            PostMessageA(self.hwnd, WM_MOUSEMOVE, 0, &mut point as *mut _ as isize);
+            PostMessageA(self.hwnd, WM_LBUTTONDOWN, 1, &mut point as *mut _ as isize);
+            self.Sleep(20);
+            PostMessageA(self.hwnd, WM_LBUTTONUP, 1, &mut point as *mut _ as isize);
+            self.Sleep(20);
+            // self.RestorePos();
+        }
+        // self.SavePos();
+        // self.Click(x, y);
     }
 
     pub fn CheckColor(&self, x: i32, y: i32, color: &str) -> bool {
-        let (x, y) = self.toScreenPos(x, y);
-        check_color_regex(x, y, color)
+        // let (x, y) = self.toScreenPos(x, y);
+        check_color_regex(self.hwnd, x, y, color)
     }
 
     pub fn CheckColorS(&self, x: i32, y: i32, color: &str) -> bool {
-        let (x, y) = self.toScreenPos(x, y);
+        // let (x, y) = self.toScreenPos(x, y);
         check_color_regex_batch(x, y, color)
     }
 
     pub fn GetColor(&self, x: i32, y: i32) -> String {
-        let (x, y) = self.toScreenPos(x, y);
-        color_to_hex(get_color(x, y))
+        // let (x, y) = self.toScreenPos(x, y);
+        color_to_hex(get_color(self.hwnd, x, y))
     }
 
     pub fn GetColorS(&self, x: i32, y: i32) -> String {
-        let (x, y) = self.toScreenPos(x, y);
+        // let (x, y) = self.toScreenPos(x, y);
         color_to_hex(get_color_batch(x, y))
     }
 
     pub fn WaitColor(&self, x: i32, y: i32, color: &str, timeout: f64) -> bool {
-        let (x, y) = self.toScreenPos(x, y);
+        // let (x, y) = self.toScreenPos(x, y);
         let start = std::time::Instant::now();
         while start.elapsed().as_secs_f64() < timeout {
-            if check_color_regex(x, y, color) {
+            if check_color_regex(self.hwnd, x, y, color) {
                 return true;
             }
         }

@@ -75,7 +75,7 @@ fn apply_material(window: tauri::WebviewWindow, material: &str) -> String {
 pub fn run() {
     // tauri::async_runtime::set(tokio::runtime::Handle::current());
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        // .plugin(tauri_plugin_updater::Builder::new().build())
         // .plugin(tauri_plugin_http::init())
         // .plugin(tauri_plugin_notification::init())
         // .plugin(tauri_plugin_os::init())
@@ -98,6 +98,8 @@ pub fn run() {
 
             #[cfg(target_os = "windows")]
             {
+                app.handle()
+                    .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
                 use sysinfo::System;
                 let mut sys = System::new_all();
                 sys.refresh_all();

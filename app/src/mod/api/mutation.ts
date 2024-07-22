@@ -188,9 +188,18 @@ export const addTaskMutation = namedMutation(/* GraphQL */ `
         }
     }
 `)
+
 export const addTaskAsyncMutation = namedMutation(/* GraphQL */ `
     mutation ($roomId: String!, $name: String!, $maxUser: Int, $desc: String) {
         addTaskAsync(roomId: $roomId, name: $name, maxUser: $maxUser, desc: $desc) {
+            id
+        }
+    }
+`)
+
+export const addTaskEndAsyncMutation = namedMutation(/* GraphQL */ `
+    mutation ($roomId: String!, $name: String!, $maxUser: Int, $desc: String) {
+        addTaskEndAsync(roomId: $roomId, name: $name, maxUser: $maxUser, desc: $desc) {
             id
         }
     }
@@ -205,5 +214,49 @@ export const endTaskMutation = namedMutation<boolean>(/* GraphQL */ `
 export const joinTaskMutation = namedMutation<boolean>(/* GraphQL */ `
     mutation ($taskId: String!) {
         joinTask(taskId: $taskId)
+    }
+`)
+
+export const rtcSignalMutation = namedMutation<boolean>(/* GraphQL */ `
+    mutation ($roomId: String!, $type: String!, $from: String!, $to: String!, $body: String!) {
+        rtcSignal(roomId: $roomId, type: $type, from: $from, to: $to, body: $body)
+    }
+`)
+
+export const rtcJoinMutation = namedMutation<{
+    id: string
+    end: boolean
+    user: {
+        id: string
+        name: string
+        qq: string
+    }
+    clients: {
+        id: string
+        user: {
+            id: string
+            name: string
+            qq: string
+        }
+    }[]
+}>(/* GraphQL */ `
+    mutation ($roomId: String!) {
+        rtcJoin(roomId: $roomId) {
+            id
+            end
+            user {
+                id
+                name
+                qq
+            }
+            clients {
+                id
+                user {
+                    id
+                    name
+                    qq
+                }
+            }
+        }
     }
 `)

@@ -36,8 +36,81 @@ const cacheExchange = offlineExchange({
     // schema,
     storage,
     updates: {
-        Mutation: {},
+        Mutation: {
+            rtcJoin: (
+                result: {
+                    rtcJoin: {
+                        id: string
+                        end: boolean
+                        user: { id: string; name: string; qq: string }
+                        clients: { id: string; end: boolean; user: { id: string; name: string; qq: string } }[]
+                    }
+                },
+                args,
+                cache,
+                _info
+            ) => {
+                const newRtc = result.rtcJoin
+                cache.updateQuery(
+                    {
+                        query: gql`
+                            query ($roomId: String!) {
+                                rtcClients(roomId: $roomId) {
+                                    id
+                                    end
+                                    user {
+                                        id
+                                        name
+                                        qq
+                                    }
+                                }
+                            }
+                        `,
+                        variables: { roomId: args.roomId },
+                    },
+                    (data) => {
+                        if (!data) return { rtcClients: [newRtc] }
+                        if (data.rtcClients.find((v: any) => v.id !== newRtc.id)) {
+                            data.rtcClients.push(newRtc)
+                        }
+                        return data
+                    }
+                )
+            },
+        },
         Subscription: {
+            newRtc(result: { newRtc: { id: string; end: boolean; user: { id: string; name: string; qq: string } } }, args, cache, _info) {
+                const newRtc = result.newRtc
+
+                cache.updateQuery(
+                    {
+                        query: gql`
+                            query ($roomId: String!) {
+                                rtcClients(roomId: $roomId) {
+                                    id
+                                    end
+                                    user {
+                                        id
+                                        name
+                                        qq
+                                    }
+                                }
+                            }
+                        `,
+                        variables: { roomId: args.roomId },
+                    },
+                    (data) => {
+                        if (newRtc.end) {
+                            if (!data) return { rtcClients: [] }
+                            data.rtcClients = data.rtcClients.filter((v: any) => v.id !== newRtc.id)
+                        } else {
+                            if (!data) return { rtcClients: [newRtc] }
+                            data.rtcClients.push(newRtc)
+                        }
+                        return data
+                    }
+                )
+            },
             updateTask(result: any, args, cache, _info) {
                 const fragment = gql`
                     fragment _ on Task {

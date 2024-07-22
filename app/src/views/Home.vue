@@ -56,6 +56,14 @@ function timeStr(ms: number) {
                 <div class="flex w-full items-center bg-base-100/50 hover:bg-base-100 transition-all duration-500 rounded-lg p-4" v-else>
                     <a href="#/download" class="btn btn-primary flex-1">{{ $t("home.download") }}</a>
                 </div>
+                <div class="flex w-full items-center bg-base-100/50 hover:bg-base-100 transition-all duration-500 rounded-lg p-4">
+                    <a
+                        target="_blank"
+                        href="https://developer.microsoft.com/zh-cn/microsoft-edge/webview2/?form=MA13LH#download"
+                        class="btn btn-primary flex-1"
+                        >{{ $t("home.deps") }}</a
+                    >
+                </div>
                 <!-- <StatisticsItem :progress="stat.dailyElite / 400" title="今日精英">{{ stat.dailyElite }}</StatisticsItem> -->
                 <!-- <StatisticsItem :progress="stat.dailyNormal / 2000" title="今日小怪">{{ stat.dailyNormal }}</StatisticsItem> -->
                 <!-- <StatisticsItem title="今日收入">{{ stat.dailyIncome }}</StatisticsItem> -->

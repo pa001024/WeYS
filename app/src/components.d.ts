@@ -53,5 +53,6 @@ declare module 'vue' {
     StatisticsProgress: typeof import('./components/StatisticsProgress.vue')['default']
     Toast: typeof import('./components/Toast.vue')['default']
     Tooltip: typeof import('./components/Tooltip.vue')['default']
+    UserItem: typeof import('./components/UserItem.vue')['default']
   }
 }

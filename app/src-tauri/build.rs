@@ -14,6 +14,9 @@ fn main() {
                 "auto_join",
                 "auto_open",
                 "auto_login",
+                "auto_setup",
+                "is_ingame",
+                "set_hotkey",
                 "launch_game",
             ]),
         )

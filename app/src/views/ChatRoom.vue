@@ -11,6 +11,8 @@ import { useUserStore } from "../mod/state/user"
 import { useGameStore } from "../mod/state/game"
 import { env } from "../env"
 import { copyContent, copyText, pasteText } from "../mod/util/copy"
+import { useRTC } from "../mod/api/rtc"
+import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut"
 
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
@@ -18,6 +20,26 @@ const user = useUserStore()
 const game = useGameStore()
 const newMsgTip = ref(true)
 const newMsgJoin = ref(true)
+const keyboardShortcut = ref(false)
+let lastTask: Task | null = null
+
+watch(keyboardShortcut, async (enable) => {
+    if (enable) {
+        register("CmdOrControl+Shift+R", (e) => {
+            if (e.state === "Pressed") {
+                if (lastTask) {
+                    autoJoinGame(lastTask)
+                }
+            }
+        })
+    } else {
+        await unregisterAll()
+    }
+})
+
+onUnmounted(async () => {
+    await unregisterAll()
+})
 
 const el = ref<HTMLElement | null>(null)
 
@@ -41,7 +63,9 @@ watch(msgCount, (count) => {
         user.setRoomReadedCount(roomId.value, count)
     }
 })
-onMounted(() => {
+
+const { micOn } = useRTC(roomId)
+onMounted(async () => {
     if (msgCount.value > 0) user.setRoomReadedCount(roomId.value, msgCount.value)
 })
 
@@ -144,10 +168,13 @@ useSubscription<{ newTask: Task }>(
     },
     (_, data) => {
         if (data.newTask) {
+            lastTask = data.newTask
             // 播放音效
             if (newMsgTip.value) newTaskSound.play()
             // 自动复制
-            if (newMsgJoin.value) copyText(data.newTask.name)
+            if (newMsgJoin.value) {
+                copyText(data.newTask.name)
+            }
         }
         return data
     }
@@ -257,12 +284,12 @@ async function insertImage() {
 
 async function addTask() {
     const uid = await pasteText()
-    if (uid.match(/\d{9}/)) {
+    if (uid.match(/^\d{9}$/)) {
         await addTaskMutation({
             roomId: roomId.value,
             name: uid,
             maxUser: 3,
-            maxAge: 30,
+            maxAge: 15,
             desc: "软饭",
         })
     }
@@ -277,13 +304,13 @@ function startAutoTask() {
     } else {
         timerAutoTask.value = setInterval(async () => {
             const uid = await pasteText()
-            if (uid.match(/\d{9}/) && lastUID !== uid) {
+            if (uid.match(/^\d{9}$/) && lastUID !== uid) {
                 lastUID = uid
                 await addTaskMutation({
                     roomId: roomId.value,
                     name: uid,
                     maxUser: 3,
-                    maxAge: 30,
+                    maxAge: 15,
                     desc: "软饭",
                 })
             }
@@ -350,157 +377,183 @@ async function autoJoinGame(task: Task) {
 <template>
     <div class="w-full h-full bg-base-200/50 flex">
         <!-- 聊天窗口 -->
-        <div class="flex-1 flex flex-col overflow-hidden relative">
-            <div class="flex flex-col gap-2 absolute left-0 right-0 justify-center z-10 p-4">
-                <!-- 任务列表 -->
-                <GQQuery
-                    :query="`query ($roomId: String!) {
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- 主内容区 -->
+            <div class="flex-1 flex flex-col overflow-hidden relative">
+                <div class="flex flex-col gap-2 absolute left-0 right-0 justify-center z-10 p-4">
+                    <!-- 任务列表 -->
+                    <GQQuery
+                        :query="`query ($roomId: String!) {
     doingTasks(roomId: $roomId) {
         id,name,desc,maxUser,maxAge,userList,startTime,endTime,roomId,userId,createdAt,updateAt,user {id,name,qq}
+    }
+}`"
+                        :variables="variables"
+                        v-slot="{ data }"
+                    >
+                        <transition-group name="slide-right">
+                            <div
+                                v-if="data"
+                                v-for="item in data.doingTasks"
+                                :key="item"
+                                class="flex items-center justify-between gap-2 bg-base-100 shadow-md rounded-md px-4 p-2"
+                            >
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2">
+                                        <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
+                                            item.desc
+                                        }}</span>
+                                        <span class="select-all">{{ item.name }}</span>
+                                    </div>
+                                    <div class="text-sm">
+                                        {{ item.user.name }}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-2 min-w-24 items-center">
+                                    <div class="text-sm">
+                                        <UserItem v-for="u in item.userList" :key="u" :id="u"></UserItem>
+                                    </div>
+                                    <div class="text-sm">{{ item.userList.length }} / {{ item.maxUser }}</div>
+                                </div>
+                                <div class="flex-none flex gap-2">
+                                    <div class="btn btn-sm btn-primary" @click="endTask(item)">
+                                        {{ $t("task.end") }}
+                                    </div>
+                                    <div v-if="env.isApp && game.running" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                        {{ $t("task.join") }}
+                                    </div>
+                                    <div v-else class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                        {{ $t("task.copy") }}
+                                    </div>
+                                </div>
+                            </div>
+                        </transition-group>
+                    </GQQuery>
+                </div>
+                <GQAutoPage
+                    v-if="msgCount"
+                    @loadref="(r) => (el = r)"
+                    direction="top"
+                    class="flex-1 overflow-hidden"
+                    innerClass="flex w-full h-full flex-col gap-2 p-4"
+                    :limit="20"
+                    :offset="msgCount"
+                    :query="`query ($roomId: String!, $limit: Int, $offset: Int) {
+    msgs(roomId: $roomId, limit: $limit, offset: $offset) {
+        id, edited, content, createdAt, user { id, name, qq }
     }
 }
 `"
                     :variables="variables"
+                    dataKey="msgs"
                     v-slot="{ data }"
                 >
-                    <transition-group name="slide-right">
-                        <div
-                            v-if="data"
-                            v-for="item in data.doingTasks"
-                            :key="item"
-                            class="flex items-center justify-between gap-2 bg-base-100 shadow-md rounded-md p-4"
-                        >
-                            <div class="flex flex-col">
-                                <div class="flex items-center gap-2">
-                                    <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
-                                        item.desc
-                                    }}</span>
-                                    <span class="select-all">{{ item.name }}</span>
-                                </div>
-                                <div class="text-sm">
-                                    {{ item.user.name }}
-                                </div>
-                            </div>
-                            <div class="flex flex-col gap-2 items-center">
-                                <div class="text-sm">{{ item.userList.length }} / {{ item.maxUser }}</div>
-                            </div>
-                            <div class="flex-none flex gap-2">
-                                <div class="btn btn-sm btn-primary" @click="endTask(item)">
-                                    {{ $t("task.end") }}
-                                </div>
-                                <div v-if="env.isApp && game.running" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
-                                    {{ $t("task.join") }}
-                                </div>
-                                <div v-else class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
-                                    {{ $t("task.copy") }}
-                                </div>
-                            </div>
+                    <!-- 消息列表 -->
+                    <div v-if="data" class="group flex items-start gap-2" v-for="item in data.msgs" :key="item.id">
+                        <div v-if="!item.content && editId !== item.id" class="text-xs text-base-content/60 m-auto">
+                            {{ $t("chat.retractedAMessage", { name: user.id === item.user.id ? $t("chat.you") : item.user?.name }) }}
+                            <span class="text-xs text-primary underline cursor-pointer" @click="restoreMessage(item)">{{
+                                $t("chat.restore")
+                            }}</span>
                         </div>
-                    </transition-group>
-                </GQQuery>
+                        <div class="flex-1 flex items-start gap-2" :class="{ 'flex-row-reverse': user.id === item.user.id }" v-else>
+                            <ContextMenu>
+                                <QQAvatar class="mt-2 size-8" :qq="item.user.qq" :name="item.user?.name"></QQAvatar>
+
+                                <template #menu>
+                                    <ContextMenuItem
+                                        class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                    >
+                                        <Icon class="size-4 mr-2" icon="la:eye-slash" />
+                                        {{ $t("chat.block") }}
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                    >
+                                        <Icon class="size-4 mr-2" icon="la:glasses" />
+                                        {{ $t("chat.follow") }}
+                                    </ContextMenuItem>
+                                </template>
+                            </ContextMenu>
+                            <ContextMenu class="flex items-start flex-col" :class="{ 'items-end': user.id === item.user.id }">
+                                <div class="text-base-content/60 text-sm min-h-5">{{ item.user.name }}</div>
+                                <div
+                                    v-if="editId === item.id"
+                                    ref="editInput"
+                                    contenteditable
+                                    class="safe-html rounded-lg bg-base-100 select-text inline-flex flex-col text-sm max-w-80 overflow-hidden gap-2"
+                                    :class="{ 'p-2': !isImage(item.content), 'bg-primary text-base-100': user.id === item.user.id }"
+                                    v-html="sanitizeHTML(item.content)"
+                                ></div>
+                                <div
+                                    v-else
+                                    class="safe-html rounded-lg bg-base-100 select-text inline-flex flex-col text-sm max-w-80 overflow-hidden gap-2"
+                                    :class="{ 'p-2': !isImage(item.content), 'bg-primary text-base-100': user.id === item.user.id }"
+                                    v-html="sanitizeHTML(item.content)"
+                                ></div>
+
+                                <template #menu>
+                                    <ContextMenuItem
+                                        @click="copyContent(item.content)"
+                                        class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                    >
+                                        <Icon class="size-4 mr-2" icon="la:copy-solid" />
+                                        {{ $t("chat.copy") }}
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        v-if="user.id === item.user.id"
+                                        @click="retractMessage(item)"
+                                        class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                    >
+                                        <Icon class="size-4 mr-2" icon="la:reply-solid" />
+                                        {{ $t("chat.revert") }}
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        v-if="user.id === item.user.id"
+                                        @click="startEdit(item)"
+                                        class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
+                                    >
+                                        <Icon class="size-4 mr-2" icon="la:edit-solid" />
+                                        {{ $t("chat.edit") }}
+                                    </ContextMenuItem>
+                                </template>
+                            </ContextMenu>
+                            <div class="text-xs text-base-content/60 self-end" v-if="item.edited">{{ $t("chat.edited") }}</div>
+                            <div class="flex-1"></div>
+                            <div class="hidden group-hover:block p-1 text-xs text-base-content/60">{{ item.createdAt }}</div>
+                        </div>
+                    </div>
+                </GQAutoPage>
+                <div v-else class="flex-1 flex flex-col items-center justify-center">
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <div class="flex p-4 font-bold text-lg text-base-content/60">{{ $t("chat.newRoomBanner") }}</div>
+                        <div class="flex btn btn-primary" @click="sendMessageMutation({ content: $t('chat.hello'), roomId })">
+                            {{ $t("chat.sayHello") }}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <GQAutoPage
-                v-if="msgCount"
-                @loadref="(r) => (el = r)"
-                direction="top"
-                class="flex-1 overflow-hidden"
-                innerClass="flex w-full h-full flex-col gap-2 p-4"
-                :limit="20"
-                :offset="msgCount"
-                :query="`query ($roomId: String!, $limit: Int, $offset: Int) {
-    msgs(roomId: $roomId, limit: $limit, offset: $offset) {
-        id,edited,content,createdAt,user {id,name,qq}
+            <!-- 在线用户 -->
+            <GQQuery
+                :query="`query ($roomId: String!) {
+    rtcClients(roomId: $roomId) {
+        id, end, user { id, name, qq }
     }
-}
-`"
+}`"
                 :variables="variables"
-                dataKey="msgs"
                 v-slot="{ data }"
             >
-                <!-- 消息列表 -->
-                <div v-if="data" class="group flex items-start gap-2" v-for="item in data.msgs" :key="item.id">
-                    <div v-if="!item.content && editId !== item.id" class="text-xs text-base-content/60 m-auto">
-                        {{ $t("chat.retractedAMessage", { name: user.id === item.user.id ? $t("chat.you") : item.user?.name }) }}
-                        <span class="text-xs text-primary underline cursor-pointer" @click="restoreMessage(item)">{{
-                            $t("chat.restore")
-                        }}</span>
-                    </div>
-                    <div class="flex-1 flex items-start gap-2" :class="{ 'flex-row-reverse': user.id === item.user.id }" v-else>
-                        <ContextMenu>
-                            <QQAvatar class="mt-2 size-8" :qq="item.user.qq" :name="item.user?.name"></QQAvatar>
-
-                            <template #menu>
-                                <ContextMenuItem
-                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
-                                >
-                                    <Icon class="size-4 mr-2" icon="la:eye-slash" />
-                                    {{ $t("chat.block") }}
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
-                                >
-                                    <Icon class="size-4 mr-2" icon="la:glasses" />
-                                    {{ $t("chat.follow") }}
-                                </ContextMenuItem>
-                            </template>
-                        </ContextMenu>
-                        <ContextMenu class="flex items-start flex-col" :class="{ 'items-end': user.id === item.user.id }">
-                            <div class="text-base-content/60 text-sm min-h-5">{{ item.user.name }}</div>
-                            <div
-                                v-if="editId === item.id"
-                                ref="editInput"
-                                contenteditable
-                                class="safe-html rounded-lg bg-base-100 select-text inline-flex flex-col text-sm max-w-80 overflow-hidden gap-2"
-                                :class="{ 'p-2': !isImage(item.content), 'bg-primary text-base-100': user.id === item.user.id }"
-                                v-html="sanitizeHTML(item.content)"
-                            ></div>
-                            <div
-                                v-else
-                                class="safe-html rounded-lg bg-base-100 select-text inline-flex flex-col text-sm max-w-80 overflow-hidden gap-2"
-                                :class="{ 'p-2': !isImage(item.content), 'bg-primary text-base-100': user.id === item.user.id }"
-                                v-html="sanitizeHTML(item.content)"
-                            ></div>
-
-                            <template #menu>
-                                <ContextMenuItem
-                                    @click="copyContent(item.content)"
-                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
-                                >
-                                    <Icon class="size-4 mr-2" icon="la:copy-solid" />
-                                    {{ $t("chat.copy") }}
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                    v-if="user.id === item.user.id"
-                                    @click="retractMessage(item)"
-                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
-                                >
-                                    <Icon class="size-4 mr-2" icon="la:reply-solid" />
-                                    {{ $t("chat.revert") }}
-                                </ContextMenuItem>
-                                <ContextMenuItem
-                                    v-if="user.id === item.user.id"
-                                    @click="startEdit(item)"
-                                    class="group text-sm p-2 leading-none text-base-content rounded flex items-center relative select-none outline-none data-[disabled]:text-base-content/60 data-[disabled]:pointer-events-none data-[highlighted]:bg-primary data-[highlighted]:text-base-100"
-                                >
-                                    <Icon class="size-4 mr-2" icon="la:edit-solid" />
-                                    {{ $t("chat.edit") }}
-                                </ContextMenuItem>
-                            </template>
-                        </ContextMenu>
-                        <div class="text-xs text-base-content/60 self-end" v-if="item.edited">{{ $t("chat.edited") }}</div>
-                        <div class="flex-1"></div>
-                        <div class="hidden group-hover:block p-1 text-xs text-base-content/60">{{ item.createdAt }}</div>
+                <div v-if="data" class="flex items-center p-1 gap-2">
+                    <div v-for="item in data.rtcClients" :key="item.id" class="flex group bg-primary items-center rounded-full px-1">
+                        <QQAvatar class="size-6 my-1" :name="item.user.name" :qq="item.user.qq" />
+                        <div
+                            class="flex text-sm text-base-100 max-w-0 group-hover:max-w-24 group-hover:mx-1 overflow-hidden transition-all duration-500"
+                        >
+                            {{ item.user.name }}
+                        </div>
                     </div>
                 </div>
-            </GQAutoPage>
-            <div v-else class="flex-1 flex flex-col items-center justify-center">
-                <div class="flex-1 flex flex-col items-center justify-center">
-                    <div class="flex p-4 font-bold text-lg text-base-content/60">{{ $t("chat.newRoomBanner") }}</div>
-                    <div class="flex btn btn-primary" @click="sendMessageMutation({ content: $t('chat.hello'), roomId })">
-                        {{ $t("chat.sayHello") }}
-                    </div>
-                </div>
-            </div>
+            </GQQuery>
             <!-- 分割线 -->
             <div class="flex-none w-full relative">
                 <div
@@ -550,6 +603,20 @@ async function autoJoinGame(task: Task) {
                             @click="newMsgJoin = !newMsgJoin"
                         >
                             A
+                        </div>
+                    </Tooltip>
+                    <Tooltip side="top" :tooltip="$t('chat.micOn')">
+                        <div class="btn btn-ghost btn-sm btn-square text-xl" :class="{ 'text-primary': micOn }" @click="micOn = !micOn">
+                            <Icon icon="la:microphone-solid" />
+                        </div>
+                    </Tooltip>
+                    <Tooltip v-if="env.isApp" side="top" :tooltip="$t('chat.keyboardShortcut')">
+                        <div
+                            class="btn btn-ghost btn-sm text-xl"
+                            :class="{ 'text-primary': keyboardShortcut }"
+                            @click="keyboardShortcut = !keyboardShortcut"
+                        >
+                            <Icon icon="la:keyboard" />
                         </div>
                     </Tooltip>
                 </div>

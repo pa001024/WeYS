@@ -95,13 +95,13 @@ watchEffect(() => {
     }
 })
 
-function selectPrev(e: PointerEvent) {
-    if (game.selectPrev() && e.button === 2) {
+function selectPrev(e: PointerEvent | MouseEvent) {
+    if (game.selectPrev() && e.button !== 2) {
         game.launchGame()
     }
 }
-function selectNext(e: PointerEvent) {
-    if (game.selectNext() && e.button === 2) {
+function selectNext(e: PointerEvent | MouseEvent) {
+    if (game.selectNext() && e.button !== 2) {
         game.launchGame()
     }
 }
@@ -192,31 +192,39 @@ function copyUID(uid?: string) {
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="form-control flex flex-row justify-between items-center flex-wrap">
-                        <label class="label cursor-pointer space-x-2 min-w-32 justify-start">
-                            <input type="checkbox" v-model="game.autoLoginEnable" class="checkbox checkbox-primary" />
-                            <span class="label-text">{{ $t("game.autoLogin") }}</span>
-                        </label>
-                        <div v-if="game.autoLoginEnable" class="flex flex-1 items-center space-x-2">
-                            <span class="text-sm">{{ $t("game.autoSend") }}</span>
-                            <Select v-model="game.autoLoginRoom">
-                                <SelectItem value="-">{{ $t("game.autoLoginRoom") }}</SelectItem>
-                                <GQQuery query="query { rooms { id, name } }" :variables="{}" v-slot="{ data }">
-                                    <SelectItem v-if="data" v-for="item in data.rooms" :key="item.id" :value="item.id">{{
-                                        item.name
-                                    }}</SelectItem>
-                                </GQQuery>
-                            </Select>
-                            <span class="btn btn-sm btn-ghost" :class="{ disabled: game.autoLoginRoom !== '-' }" @click="game.sendUID">{{
-                                $t("game.send")
-                            }}</span>
-                        </div>
-                    </div>
-                </div>
             </CollapsibleContent>
         </CollapsibleRoot>
-
+        <div>
+            <div class="form-control flex flex-row justify-between items-center flex-wrap">
+                <label class="label cursor-pointer space-x-2 min-w-32 justify-start">
+                    <input type="checkbox" v-model="game.autoLoginEnable" class="checkbox checkbox-primary" />
+                    <span class="label-text">{{ $t("game.autoLogin") }}</span>
+                </label>
+                <div v-if="game.autoLoginEnable" class="flex flex-1 items-center space-x-2">
+                    <span class="text-sm">{{ $t("game.autoSend") }}</span>
+                    <Select v-model="game.autoLoginRoom">
+                        <SelectItem value="-">{{ $t("game.autoLoginRoom") }}</SelectItem>
+                        <GQQuery query="query { rooms { id, name } }" :variables="{}" v-slot="{ data }">
+                            <SelectItem v-if="data" v-for="item in data.rooms" :key="item.id" :value="item.id">{{ item.name }}</SelectItem>
+                        </GQQuery>
+                    </Select>
+                    <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                        <input type="checkbox" v-model="game.autoLoginTryNext" class="checkbox checkbox-primary" />
+                        <span class="label-text">{{ $t("game.autoNext") }}</span>
+                    </label>
+                    <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                        <input type="checkbox" v-model="game.autoLoginOnlyEnd" class="checkbox checkbox-primary" />
+                        <span class="label-text">{{ $t("game.onlyEnd") }}</span>
+                    </label>
+                    <div class="flex-1"></div>
+                    <Tooltip side="left" :tooltip="$t('game.send')">
+                        <span class="btn btn-sm btn-primary" :class="{ 'btn-disabled': game.autoLoginRoom === '-' }" @click="game.sendUID">
+                            {{ $t("chat.send") }} <Icon icon="la:paper-plane" class="text-xl" />
+                        </span>
+                    </Tooltip>
+                </div>
+            </div>
+        </div>
         <div class="mb-4 space-x-2 flex">
             <Tooltip :tooltip="$t('game.addAccountReg')" side="top">
                 <CheckAnimationButton icon="la:plus-solid" @click="game.addAccountReg" @contextmenu.prevent="game.addNewAccountReg" />
@@ -239,10 +247,13 @@ function copyUID(uid?: string) {
             </Tooltip>
             <div class="flex-1"></div>
             <Tooltip :tooltip="$t('game.prev')" side="top">
-                <CheckAnimationButton icon="la:prev" @click="selectPrev" @contextmenu.prevent="selectPrev" />
+                <CheckAnimationButton noanimate icon="la:prev" @click="selectPrev" @contextmenu.prevent="selectPrev" />
             </Tooltip>
-            <Tooltip :tooltip="$t('game.next')" side="top">
-                <CheckAnimationButton icon="la:next" @click="selectNext" @contextmenu.prevent="selectNext" />
+            <Tooltip :tooltip="$t('game.nextTip')" side="top">
+                <button class="btn btn-sm btn-primary" @click="selectNext" @contextmenu.prevent="selectNext">
+                    {{ $t("game.next") }}
+                    <Icon icon="la:next" class="text-xl" />
+                </button>
             </Tooltip>
         </div>
         <div class="bg-base-100 p-4 w-full justify-items-center rounded-lg flex-1 flex flex-col overflow-hidden">

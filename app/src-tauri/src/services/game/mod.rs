@@ -3,7 +3,7 @@ use std::{ffi::c_void, time::Duration};
 use serde::{Deserialize, Serialize};
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    AppHandle, Manager, Runtime,
+    AppHandle, Emitter, Runtime,
 };
 use winreg::{enums::*, RegKey, RegValue};
 
@@ -16,15 +16,15 @@ const GAME_PROCESS: &str = "YuanShen.exe";
 
 #[derive(Serialize, Deserialize, Clone)]
 struct LoginPayload {
+    id: String,
     success: bool,
 }
 
 // 自动切世界权限
 #[tauri::command]
 async fn auto_open() -> bool {
-    let pid = get_process_by_name(GAME_PROCESS).unwrap_or(0);
-    let interval = Duration::from_millis(100);
-    if let Some(hwnd) = get_window_by_process(pid) {
+    if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+        let interval = Duration::from_millis(100);
         let ctl = GameControl::new(hwnd);
         ctl.focus();
         tokio::time::sleep(interval).await;
@@ -92,20 +92,20 @@ async fn auto_join(uid: String) -> bool {
 }
 
 fn enter_f2(ctl: &GameControl) -> bool {
-    save_dc();
+    save_dc(ctl.hwnd);
     // F2 界面
     if ctl.CheckColorS(63, 38, "D3BC8E") && ctl.CheckColorS(1537, 54, "ECE5D8") {
-        free_dc();
+        free_dc(ctl.hwnd);
         return true;
     }
     // 加载界面
     if ctl.CheckColorS(333, 333, "1C1C22|FFFFFF|000000") {
-        free_dc();
+        free_dc(ctl.hwnd);
         return false;
     }
     // 1P主界面
     if ctl.CheckColorS(298, 44, "FFFFFF") {
-        free_dc();
+        free_dc(ctl.hwnd);
         ctl.PressKey("f2");
         return false;
     }
@@ -115,6 +115,7 @@ fn enter_f2(ctl: &GameControl) -> bool {
 #[tauri::command]
 async fn launch_game<R: Runtime>(
     app: AppHandle<R>,
+    id: String,
     path: String,
     cmds: String,
     unlock: bool,
@@ -140,7 +141,13 @@ async fn launch_game<R: Runtime>(
     println!("Process ID: {}", pi.hProcess);
 
     // 游戏进程启动
-    let _ = app.emit("game_init", LoginPayload { success: true });
+    let _ = app.emit(
+        "game_init",
+        LoginPayload {
+            id: id.clone(),
+            success: true,
+        },
+    );
 
     // 帧率解锁
     if unlock {
@@ -148,33 +155,53 @@ async fn launch_game<R: Runtime>(
     }
 
     // 游戏窗口设置
-    loop {
-        if let Ok(npid) = get_process_by_name(GAME_PROCESS) {
-            if let Some(hwnd) = get_window_by_process(npid) {
-                if pid > 0 {
-                    move_window(hwnd, x, y);
-                    if let Some(rect) = get_window_rect(hwnd) {
-                        if rect.left == x && rect.top == y {
-                            println!(
-                                "window_rect hwnd = {}, pos = {},{}",
-                                hwnd, rect.left, rect.top
-                            );
-                            break;
-                        }
+    let now = std::time::Instant::now();
+    let timeout = Duration::from_secs(30);
+    while now.elapsed() < timeout {
+        if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+            if pid > 0 {
+                move_window(hwnd, x, y);
+                if let Some(rect) = get_window_rect(hwnd) {
+                    if rect.left == x && rect.top == y {
+                        println!(
+                            "window_rect hwnd = {}, pos = {},{}",
+                            hwnd, rect.left, rect.top
+                        );
+                        let _ = app.emit(
+                            "game_start",
+                            LoginPayload {
+                                id: id.clone(),
+                                success: true,
+                            },
+                        );
+                        return true;
                     }
-                } else {
-                    if let Some(rect) = get_window_rect(hwnd) {
-                        if rect.right - rect.left > 500 {
-                            break;
-                        }
+                }
+            } else {
+                if let Some(rect) = get_window_rect(hwnd) {
+                    if rect.right - rect.left > 500 {
+                        let _ = app.emit(
+                            "game_start",
+                            LoginPayload {
+                                id: id.clone(),
+                                success: true,
+                            },
+                        );
+                        return true;
                     }
                 }
             }
         }
         sleep(100);
     }
+    let _ = app.emit(
+        "game_start",
+        LoginPayload {
+            id: id.clone(),
+            success: false,
+        },
+    );
 
-    let _ = app.emit("game_enter", LoginPayload { success: true });
     true
 }
 
@@ -202,73 +229,138 @@ fn unlockfps(pid: isize) -> bool {
 }
 
 #[tauri::command]
-async fn auto_login<R: Runtime>(app: AppHandle<R>, login: String, pwd: String, autosend: bool) {
-    if let Ok(pid) = get_process_by_name(GAME_PROCESS) {
-        if let Some(hwnd) = get_window_by_process(pid) {
-            let ctl = GameControl::new(hwnd);
-            // 适龄提示
-            println!("自动登录");
-            if !ctl.WaitColor(1510, 70, "1.[89].[CD].|0.4.6.", 30.) {
-                println!("登录超时");
-                let _ = app.emit("game_login", LoginPayload { success: false });
-                return;
+async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pwd: String) {
+    if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+        let ctl = GameControl::new(hwnd);
+        // 适龄提示
+        println!("自动登录");
+        if !ctl.WaitColor(1510, 70, "1.[89].[CD].|0.4.6.", 30.) {
+            println!("登录超时");
+            let _ = app.emit(
+                "game_login",
+                LoginPayload {
+                    id: id.clone(),
+                    success: false,
+                },
+            );
+            return;
+        }
+        println!("登录开始");
+        if !ctl.CheckColor(1510, 70, "1.[89].[CD].") {
+            println!("需输入密码");
+            let _ = app.emit(
+                "game_input",
+                LoginPayload {
+                    id: id.clone(),
+                    success: true,
+                },
+            );
+            ctl.focus();
+            ctl.Sleep(100);
+            ctl.WaitColor(626, 274, "FFFFFF", 5.); // 登陆框
+            ctl.Click(971, 348);
+            ctl.Sleep(100);
+            ctl.SendText(login.as_str());
+            ctl.Sleep(300);
+            ctl.Click(994, 420);
+            ctl.Sleep(100);
+            ctl.SendText(pwd.as_str());
+            ctl.Sleep(300);
+            if !ctl.CheckColor(580, 505, "DEBC60") {
+                ctl.Click(581, 514);
+                ctl.Sleep(100);
             }
-            println!("登录开始");
-            if !ctl.CheckColor(1510, 70, "1.[89].[CD].") {
-                println!("需输入密码");
-                ctl.focus();
-                ctl.Sleep(100);
-                ctl.WaitColor(626, 274, "FFFFFF", 5.); // 登陆框
-                ctl.Click(971, 348);
-                ctl.Sleep(100);
-                ctl.SendText(login.as_str());
-                ctl.Sleep(300);
-                ctl.Click(994, 420);
-                ctl.Sleep(100);
-                ctl.SendText(pwd.as_str());
-                ctl.Sleep(300);
-                if !ctl.CheckColor(580, 505, "DEBC60") {
-                    ctl.Click(581, 514);
-                    ctl.Sleep(100);
+            ctl.Click(973, 580);
+        }
+        let _ = app.emit(
+            "game_ready",
+            LoginPayload {
+                id: id.clone(),
+                success: true,
+            },
+        );
+        // 点击进入
+        let rst_before = get_uid();
+        if rst_before.uid.is_empty() {
+            println!("等待加载(注册表)");
+            let now = std::time::Instant::now();
+            let timeout = Duration::from_secs(30);
+
+            while now.elapsed() < timeout {
+                if ctl.CheckColor(761, 827, "FFFFFF") {
+                    ctl.PostClick(819, 838);
+                } else if !ctl.CheckColor(677, 297, "FFFFFF") {
+                    ctl.PostClickLazy(819, 838);
                 }
-                ctl.Click(973, 580);
+                let rst = get_uid();
+                sleep(200);
+                if !rst.uid.is_empty() {
+                    println!("成功加载");
+                    let _ = app.emit("game_enter", LoginPayload { id, success: true });
+                    return;
+                }
             }
-            // 点击进入
+        } else {
             if ctl.WaitColor(761, 827, "FFFFFF", 20.) {
-                println!("登录成功");
-                ctl.Click(819, 838);
+                ctl.PostClick(819, 838);
                 // 等待加载完毕
                 println!("等待加载");
-                ctl.WaitColor(51, 85, "4.6.A.", 40.);
-                ctl.Sleep(100);
-                let _ = app.emit("game_login", LoginPayload { success: true });
-                if ctl.WaitColor(77, 49, "FFFFFF", 2.) // 主界面
-                    && ctl.CheckColor(385, 58, "FFFFFF")
-                // F2为白色
-                {
-                    println!("成功加载");
-                    ctl.Click(385, 58); // 点击F2
-                    if ctl.WaitColor(469, 840, "ECE5D8", 2.) {
-                        println!("设置权限");
-                        ctl.Click(469, 840); // 世界权限
-                        ctl.Sleep(100);
-                        if autosend {
-                            ctl.Click(457, 686); // 无法加入
-                                                 // ctl.Click(473, 785); // 确认后可加入
-                        } else {
-                            ctl.Click(485, 735); // 直接加入
-                        }
-                        ctl.Sleep(100);
-                        ctl.Click(469, 840); // 世界权限
-                        println!("登录结束");
-
+                let now = std::time::Instant::now();
+                let timeout = Duration::from_secs(30);
+                while now.elapsed() < timeout {
+                    ctl.PostClickLazy(819, 838);
+                    let rst = get_uid();
+                    sleep(200);
+                    if !rst.uid.is_empty() {
+                        println!("成功加载");
+                        let _ = app.emit("game_enter", LoginPayload { id, success: true });
                         return;
                     }
-                } else {
-                    println!("未加载成功");
                 }
             }
-            let _ = app.emit("game_login", LoginPayload { success: false });
+        }
+        let _ = app.emit("game_enter", LoginPayload { id, success: false });
+    }
+}
+
+#[tauri::command]
+async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool) {
+    if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+        let ctl = GameControl::new(hwnd);
+        ctl.WaitColor(51, 85, "4.6.A.", 40.);
+        ctl.focus();
+        ctl.Sleep(100);
+        let _ = app.emit(
+            "game_login",
+            LoginPayload {
+                id: id.clone(),
+                success: true,
+            },
+        );
+        if ctl.WaitColor(77, 49, "FFFFFF", 2.) // 主界面
+                            && ctl.CheckColor(385, 58, "FFFFFF")
+        // F2为白色
+        {
+            println!("成功加载");
+            ctl.Click(385, 58); // 点击F2
+            if ctl.WaitColor(469, 840, "ECE5D8", 2.) {
+                println!("设置权限");
+                ctl.Click(469, 840); // 世界权限
+                ctl.Sleep(100);
+                if autosend {
+                    ctl.Click(457, 686); // 无法加入
+                                         // ctl.Click(473, 785); // 确认后可加入
+                } else {
+                    ctl.Click(485, 735); // 直接加入
+                }
+                ctl.Sleep(100);
+                ctl.Click(469, 840); // 世界权限
+                println!("登录结束");
+
+                return;
+            }
+        } else {
+            println!("未加载成功");
         }
     }
 }
@@ -415,6 +507,25 @@ async fn get_game(is_run: bool) -> bool {
     is_run
 }
 
+#[tauri::command]
+fn is_ingame() -> bool {
+    if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+        let ctl = GameControl::new(hwnd);
+        ctl.isForeground()
+    } else {
+        false
+    }
+}
+#[tauri::command]
+fn set_hotkey<R: Runtime>(app: AppHandle<R>, key: String) -> bool {
+    // static mut HOOKID: isize = 0;
+    // if unsafe { HOOKID } != 0 {
+    //     del_keyboard_hook(unsafe { HOOKID });
+    // }
+    // set_keyboard_hook(keyboard_hook);
+    true
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("game")
         .invoke_handler(tauri::generate_handler![
@@ -427,6 +538,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             auto_join,
             auto_open,
             auto_login,
+            auto_setup,
+            is_ingame,
+            set_hotkey,
             launch_game
         ])
         .build()
