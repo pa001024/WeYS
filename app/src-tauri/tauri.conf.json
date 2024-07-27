@@ -16,8 +16,8 @@
             "icons/icon.ico"
         ]
     },
-    "productName": "weys",
-    "version": "1.4.0",
+    "productName": "WeYS",
+    "version": "1.4.1",
     "identifier": "com.weys.app",
     "plugins": {
         "updater": {
