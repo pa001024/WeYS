@@ -130,39 +130,31 @@ if (env.isApp && getCurrentWindow().label === "main") {
                         maxAge: 15,
                         desc: "软饭",
                     })
-                    const openDoor = (() => {
-                        let opend = false
-                        return async () => {
-                            if (!opend) {
-                                opend = true
-                                game.state = "自动设置世界权限"
-                                await autoOpen()
-                            }
-                        }
-                    })()
 
                     const lid = game.launchId
 
                     const sub = gqClient
                         .subscription<{
-                            updateTask: {
+                            watchTask: {
                                 id: string
+                                paused?: boolean
                                 endTime: string
                             }
                         }>(
                             gql`
-                                subscription ($roomId: String!) {
-                                    updateTask(roomId: $roomId) {
+                                subscription ($taskId: String!) {
+                                    watchTask(taskId: $taskId) {
                                         id
+                                        paused
                                         endTime
                                     }
                                 }
                             `,
-                            { roomId: game.autoLoginRoom }
+                            { taskId: taskEnded.id }
                         )
                         .subscribe(async (e) => {
-                            const ev = e.data?.updateTask
-                            if (!ev || ev.id !== taskEnded.id) return
+                            const ev = e.data?.watchTask
+                            if (!ev) return
                             // 已结束或不需要等待结束
                             if (lid !== game.launchId) {
                                 sub.unsubscribe()
@@ -171,12 +163,18 @@ if (env.isApp && getCurrentWindow().label === "main") {
                             console.debug("opendoor subscribe", e)
                             if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
-                                await openDoor()
+                                await autoOpen()
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
                             } else if (game.autoLoginOnlyEnd) {
-                                await openDoor()
+                                if (ev.paused === true) {
+                                    game.state = "房间控制关门"
+                                    await autoOpen(3)
+                                } else if (ev.paused === false) {
+                                    game.state = "房间控制开门"
+                                    await autoOpen(1)
+                                }
                             }
                         })
                 }

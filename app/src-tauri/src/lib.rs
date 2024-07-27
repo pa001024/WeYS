@@ -11,14 +11,14 @@ mod services;
 // 退出程序
 #[tauri::command]
 async fn app_close(app_handle: tauri::AppHandle) {
-    let Some(window) = app_handle.get_webview_window("main") else {
-        return app_handle.exit(0);
-    };
+    // let Some(window) = app_handle.get_webview_window("main") else {
+    //     return app_handle.exit(0);
+    // };
     app_handle.save_window_state(StateFlags::all()).ok(); // don't really care if it saves it
 
-    if let Err(_) = window.close() {
-        return app_handle.exit(0);
-    }
+    // if let Err(_) = window.close() {
+    return app_handle.exit(0);
+    // }
 }
 
 #[tauri::command]

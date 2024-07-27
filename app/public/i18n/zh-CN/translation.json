@@ -86,7 +86,8 @@
     "keyboardShortcut": "快捷键加入|右键设置键位",
     "keyboardShortcutSetting": "快捷键设置",
     "joinFailed": "加入失败",
-    "joinFailedTip": "可能是房间已满"
+    "joinFailedTip": "可能是房间已满",
+    "pauseTask": "远端切号|右键暂停"
   },
   "user": {
     "title": "用户",

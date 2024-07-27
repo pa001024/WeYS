@@ -9,7 +9,14 @@ import { env } from "../env"
 import { gql, useQuery, useSubscription } from "@urql/vue"
 import { isImage, sanitizeHTML } from "../mod/util/html"
 import { copyContent, copyText, pasteText } from "../mod/util/copy"
-import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation, sendMessageMutation } from "../mod/api/mutation"
+import {
+    addTaskMutation,
+    editMessageMutation,
+    endTaskMutation,
+    joinTaskMutation,
+    pauseTaskMutation,
+    sendMessageMutation,
+} from "../mod/api/mutation"
 import { useUIStore } from "../mod/state/ui"
 import { useUserStore } from "../mod/state/user"
 import { useRTC } from "../mod/api/rtc"
@@ -351,6 +358,9 @@ onUnmounted(() => {
 async function endTask(task: Task) {
     await endTaskMutation({ taskId: task.id })
 }
+async function pauseTask(task: Task) {
+    await pauseTaskMutation({ taskId: task.id })
+}
 
 const editId = ref("")
 const editInput = ref<HTMLDivElement[] | null>(null)
@@ -420,36 +430,42 @@ async function autoJoinGame(task: Task) {
                         <transition-group name="slide-right">
                             <div
                                 v-if="data"
-                                v-for="item in data.doingTasks"
-                                :key="item"
+                                v-for="task in data.doingTasks"
+                                :key="task"
                                 class="flex items-center justify-between gap-2 bg-base-100 shadow-md rounded-md px-4 p-2"
                             >
                                 <div class="flex flex-col">
                                     <div class="flex items-center gap-2">
-                                        <span v-if="item.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
-                                            item.desc
+                                        <span v-if="task.desc" class="whitespace-nowrap text-xs rounded-xl bg-primary text-base-100 px-2">{{
+                                            task.desc
                                         }}</span>
-                                        <span class="select-all">{{ item.name }}</span>
+                                        <span class="select-all">{{ task.name }}</span>
                                     </div>
-                                    <div class="text-sm">
-                                        {{ item.user.name }}
+                                    <div class="text-sm flex items-center gap-1">
+                                        <Icon v-if="task.online" icon="la:broadcast-tower-solid" class="text-primary" />
+                                        {{ task.user.name }}
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-2 min-w-24 items-center">
                                     <div class="flex gap-1">
-                                        <UserItem v-for="u in item.userList" :key="u" :id="u"></UserItem>
+                                        <UserItem v-for="u in task.userList" :key="u" :id="u"></UserItem>
                                     </div>
-                                    <div class="text-sm">{{ item.userList.length }} / {{ item.maxUser }}</div>
+                                    <div class="text-sm">{{ task.userList.length }} / {{ task.maxUser }}</div>
                                 </div>
                                 <div class="flex-none flex gap-2">
-                                    <div class="btn btn-sm btn-primary" @click="endTask(item)">
-                                        {{ $t("task.end") }}
-                                    </div>
-                                    <div v-if="env.isApp" class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
+                                    <Tooltip :tooltip="$t('chat.pauseTask')" side="bottom">
+                                        <div class="btn btn-sm btn-primary" @click="endTask(task)" @contextmenu.prevent="pauseTask(task)">
+                                            {{ $t("task.end") }}
+                                        </div>
+                                    </Tooltip>
+                                    <div
+                                        class="btn btn-sm btn-primary"
+                                        :class="{
+                                            'btn-disabled': task.paused,
+                                        }"
+                                        @click="autoJoinGame(task)"
+                                    >
                                         {{ $t("task.join") }}
-                                    </div>
-                                    <div v-else class="btn btn-sm btn-primary" @click="autoJoinGame(item)">
-                                        {{ $t("task.copy") }}
                                     </div>
                                 </div>
                             </div>

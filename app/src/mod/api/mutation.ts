@@ -186,6 +186,12 @@ export const endTaskMutation = namedMutation<boolean>(/* GraphQL */ `
     }
 `)
 
+export const pauseTaskMutation = namedMutation<boolean>(/* GraphQL */ `
+    mutation ($taskId: String!) {
+        pauseTask(taskId: $taskId)
+    }
+`)
+
 export const joinTaskMutation = namedMutation<boolean>(/* GraphQL */ `
     mutation ($taskId: String!) {
         joinTask(taskId: $taskId)

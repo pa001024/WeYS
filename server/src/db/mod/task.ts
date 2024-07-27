@@ -3,6 +3,7 @@ import { and, eq, isNull } from "drizzle-orm"
 import { Context } from "../yoga"
 import { db, schema } from ".."
 import { now } from "../schema"
+import { clearTaskOnline, getTaskOnlineStatus, isTaskOnline, setTaskOnline, toggleTaskPaused } from "../kv/task"
 
 export const typeDefs = /* GraphQL */ `
     type Query {
@@ -22,12 +23,16 @@ export const typeDefs = /* GraphQL */ `
         joinTask(taskId: String!): Boolean!
         "结束任务"
         endTask(taskId: String!): Boolean!
+        "暂停任务"
+        pauseTask(taskId: String!): Boolean!
     }
     type Subscription {
         "订阅新任务"
         newTask(roomId: String!): Task!
         "订阅任务更新"
         updateTask(roomId: String!): Task!
+        "订阅单个任务更新"
+        watchTask(taskId: String!): Task!
     }
 
     type Task {
@@ -43,6 +48,8 @@ export const typeDefs = /* GraphQL */ `
         userId: String!
         createdAt: String
         updateAt: String
+        online: Boolean
+        paused: Boolean
 
         user: User!
     }
@@ -164,6 +171,7 @@ export const resolvers = {
                 })
                 .where(eq(schema.tasks.id, taskId))
             pubsub.publish("updateTask", task.roomId, { updateTask: task })
+            pubsub.publish("watchTask", task.id, { watchTask: { ...task, ...getTaskOnlineStatus(task.id) } })
             return true
         },
         endTask: async (parent, { taskId }, { user, pubsub }, info) => {
@@ -186,6 +194,23 @@ export const resolvers = {
                 })
                 .where(eq(schema.tasks.id, taskId))
             pubsub.publish("updateTask", task.roomId, { updateTask: task })
+            pubsub.publish("watchTask", task.id, { watchTask: task })
+            return true
+        },
+        pauseTask: async (parent, { taskId }, { user, pubsub }, info) => {
+            if (!user) return false
+            if (!isTaskOnline(taskId)) return false
+            const task = await db.query.tasks.findFirst({
+                with: { user: true },
+                where: eq(schema.tasks.id, taskId),
+            })
+            if (!task) return false
+            if (task.endTime) {
+                return false
+            }
+            const taskWithStatus = { ...task, ...toggleTaskPaused(taskId) }
+            pubsub.publish("updateTask", task.roomId, { updateTask: taskWithStatus })
+            pubsub.publish("watchTask", task.id, { watchTask: taskWithStatus })
             return true
         },
     },
@@ -194,9 +219,36 @@ export const resolvers = {
             if (!user) throw new Error("need login")
             return pubsub.subscribe("newTask", roomId)
         },
-        updateTask: async (parent, { roomId }, { user, pubsub }, info) => {
+        updateTask: async (parent, { roomId }, { user, pubsub, extra }, info) => {
             if (!user) throw new Error("need login")
             return pubsub.subscribe("updateTask", roomId)
+        },
+        watchTask: async (parent, { taskId }, { user, pubsub, extra }, info) => {
+            if (!user) throw new Error("need login")
+            const task = await db.query.tasks.findFirst({
+                with: { user: true },
+                where: eq(schema.tasks.id, taskId),
+            })
+            if (!task) throw new Error("task not exist")
+            const socket = extra?.socket
+            if (socket) {
+                setTaskOnline(taskId)
+                pubsub.publish("updateTask", task.roomId, { updateTask: { ...task, online: true } })
+
+                const oldclose = socket.data.close
+                socket.data.close = async (ws) => {
+                    oldclose?.(ws)
+                    clearTaskOnline(taskId)
+                    const task = await db.query.tasks.findFirst({
+                        with: { user: true },
+                        where: and(eq(schema.tasks.id, taskId), isNull(schema.tasks.endTime)),
+                    })
+                    if (task) {
+                        pubsub.publish("updateTask", task.roomId, { updateTask: { ...task, online: false } })
+                    }
+                }
+            }
+            return pubsub.subscribe("watchTask", taskId)
         },
     },
 } satisfies Resolver<MsgGQL, Context>

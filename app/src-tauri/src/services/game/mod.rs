@@ -269,6 +269,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
                     success: true,
                 },
             );
+            ctl.SetFocus();
             ctl.Sleep(100);
             ctl.WaitEqColor(626, 274, 0xFFFFFF, 5.); // 登陆框
             ctl.Click(971, 348);

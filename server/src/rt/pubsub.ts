@@ -16,7 +16,6 @@ export interface RtcEvent {
     body: string
 }
 
-
 type RoomEvent = {
     newMessage: typeof msgs.$inferSelect
     newReaction: typeof msgs.$inferSelect
@@ -24,7 +23,8 @@ type RoomEvent = {
     userJoined: typeof users.$inferSelect
     userLeaved: typeof users.$inferSelect
     newTask: typeof tasks.$inferSelect
-    updateTask: typeof tasks.$inferSelect
+    updateTask: typeof tasks.$inferSelect & { online?: boolean; paused?: boolean }
+    watchTask: typeof tasks.$inferSelect & { online?: boolean; paused?: boolean }
     newRtcEvent: RtcEvent
     newRoomUser: RoomUserEvent
 }
