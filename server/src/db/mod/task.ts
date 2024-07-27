@@ -88,7 +88,7 @@ export const resolvers = {
     Query: {
         tasks: async (parent, { roomId, limit, offset }, context, info) => {
             if (!context.user) return []
-            const last = await db.query.tasks.findMany({
+            const tasks = await db.query.tasks.findMany({
                 with: {
                     user: true,
                 },
@@ -96,17 +96,24 @@ export const resolvers = {
                 limit,
                 offset,
             })
-            return last
+            return tasks
         },
         doingTasks: async (parent, { roomId }, context, info) => {
             if (!context.user) return []
-            const last = await db.query.tasks.findMany({
+            const tasks = await db.query.tasks.findMany({
                 with: {
                     user: true,
                 },
                 where: and(eq(schema.tasks.roomId, roomId), isNull(schema.tasks.endTime)),
             })
-            return last
+
+            return tasks.map((task) => {
+                const status = getTaskOnlineStatus(task.id)
+                if (status) {
+                    return { ...task, ...status }
+                }
+                return task
+            })
         },
     },
     Mutation: {
@@ -170,7 +177,7 @@ export const resolvers = {
                     endTime: task.endTime,
                 })
                 .where(eq(schema.tasks.id, taskId))
-            pubsub.publish("updateTask", task.roomId, { updateTask: task })
+            pubsub.publish("updateTask", task.roomId, { updateTask: { ...task, ...getTaskOnlineStatus(task.id) } })
             pubsub.publish("watchTask", task.id, { watchTask: { ...task, ...getTaskOnlineStatus(task.id) } })
             return true
         },

@@ -31,11 +31,11 @@ async fn auto_open(state: i32, post: bool) -> bool {
         if !post {
             ctl.SetFocus();
         }
-        if post {
-            ctl.PostClick(469, 840); // 世界权限
-        } else {
-            ctl.Click(469, 840); // 世界权限
+        if !ctl.EqColor(450, 835, 0xECE5D8) {
+            ctl.Click(382, 52); // F2
+            ctl.WaitEqColor(450, 835, 0xECE5D8, 2.);
         }
+        ctl.Click(469, 840); // 世界权限
         tokio::time::sleep(interval).await;
         match state {
             1 => ctl.Click(485, 735), // 直接加入
@@ -344,7 +344,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
             }
         } else {
             if ctl.WaitEqColor(761, 827, 0xFFFFFF, 20.) {
-                ctl.PostClick(819, 838);
+                ctl.Click(819, 838);
                 // 等待加载完毕
                 println!("等待加载");
                 let now = std::time::Instant::now();

@@ -421,7 +421,7 @@ async function autoJoinGame(task: Task) {
                     <GQQuery
                         :query="`query ($roomId: String!) {
     doingTasks(roomId: $roomId) {
-        id,name,desc,maxUser,maxAge,userList,startTime,endTime,createdAt,updateAt,user { id, name, qq }
+        id,name,desc,maxUser,maxAge,userList,startTime,endTime,createdAt,updateAt,paused,online,user { id, name, qq }
     }
 }`"
                         :variables="variables"

@@ -17,7 +17,8 @@ export function clearTaskOnline(id: string) {
 }
 
 export function getTaskOnlineStatus(id: string) {
-    return { ...onlineTasks.get(id), online: true }
+    const status = onlineTasks.get(id)
+    return status ? { ...status, online: true } : undefined
 }
 
 export function toggleTaskPaused(id: string) {
