@@ -159,35 +159,6 @@ export const rooms = sqliteTable("rooms", {
 export const roomsRelations = relations(rooms, ({ one, many }) => ({
     owner: one(users, { fields: [rooms.ownerId], references: [users.id] }),
     lastMsgs: many(msgs, { relationName: "room" }),
-    onlineUsers: many(roomViews, { relationName: "room" }),
-}))
-
-/** 房间查看 */
-export const roomViews = sqliteTable(
-    "room_views",
-    {
-        id: text("id").$default(id).primaryKey(),
-        roomId: text("room_id")
-            .notNull()
-            .references(() => rooms.id, { onDelete: "cascade" }),
-        userId: text("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
-        status: text("status", { enum: ["online", "exited"] })
-            .notNull()
-            .$default(() => "online"),
-        createdAt: text("created_at").$default(now),
-        updateAt: text("update_at").$onUpdate(now),
-    },
-    (roomViews) => ({
-        roomIdIdx: index("roomview_room_id_idx").on(roomViews.roomId),
-        userIdIdx: index("roomview_user_id_idx").on(roomViews.userId),
-    })
-)
-
-export const roomViewsRelations = relations(roomViews, ({ one }) => ({
-    room: one(rooms, { fields: [roomViews.roomId], references: [rooms.id] }),
-    user: one(users, { fields: [roomViews.userId], references: [users.id] }),
 }))
 
 /** 消息 */

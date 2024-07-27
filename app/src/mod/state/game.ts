@@ -4,17 +4,17 @@ import * as shell from "@tauri-apps/plugin-shell"
 import * as event from "@tauri-apps/api/event"
 import { SHA1, enc } from "crypto-js"
 import { env } from "../../env"
-import { autoLogin, autoOpen, autoSetup, getGame, getRegsk, getUid, launchGame, setRegsk, setUsd } from "../api/game"
+import { autoLogin, autoOpen, autoSetup, getGame, getRegsk, getUid, launchGame, setHotkey, setRegsk, setUsd } from "../api/game"
 import { db, GameAccount } from "../db"
 import { useObservable } from "@vueuse/rxjs"
 import { liveQuery } from "dexie"
 import { t } from "i18next"
 import { addTaskAsyncMutation, addTaskMutation, sendMessageMutation } from "../api/mutation"
 import { copyText, pasteText } from "../util/copy"
-import { gqClient } from "../http/graphql"
+import { gqClient } from "../api/graphql"
 import { gql } from "@urql/vue"
 import { nanoid } from "nanoid"
-import { pipe } from "rxjs"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 
 function hash(s: string) {
     return enc.Hex.stringify(SHA1(s))
@@ -39,7 +39,7 @@ function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-if (env.isApp) {
+if (env.isApp && getCurrentWindow().label === "main") {
     setTimeout(async () => {
         const game = useGameStore()
         while (true) {
@@ -100,7 +100,9 @@ if (env.isApp) {
             if (e.payload.id !== game.launchId) return
             if (e.payload.success) {
                 console.log("game enter (addAccountReg)")
-                await game.addAccountReg()
+                if (!(await game.getCurrent())?.uid) {
+                    await game.addAccountReg()
+                }
                 if (!game.autoLoginEnable) return
                 const acc = await game.getCurrent()
                 if (acc) {
@@ -128,7 +130,7 @@ if (env.isApp) {
                         maxAge: 15,
                         desc: "软饭",
                     })
-                    const opendoor = (() => {
+                    const openDoor = (() => {
                         let opend = false
                         return async () => {
                             if (!opend) {
@@ -169,12 +171,12 @@ if (env.isApp) {
                             console.debug("opendoor subscribe", e)
                             if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
-                                await opendoor()
+                                await openDoor()
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
                             } else if (game.autoLoginOnlyEnd) {
-                                await opendoor()
+                                await openDoor()
                             }
                         })
                 }
@@ -203,7 +205,7 @@ export const useGameStore = defineStore("game", {
             pathParams: useLocalStorage("game_path_params", "-screen-width 1600 -screen-height 900"),
             beforeGameParams: useLocalStorage("game_before_params", ""),
             afterGameParams: useLocalStorage("game_after_params", ""),
-            accounts: useObservable(liveQuery(() => db.gameAccounts.toArray())),
+            accounts: useObservable(liveQuery(() => db.gameAccounts.toArray())) as any as GameAccount[],
             liveDate: useLocalStorage("game_live_date", "1999/1/1"),
             liveTime: useLocalStorage("game_live_time", 0),
             liveDiff: useLocalStorage("game_live_diff", 0),
@@ -212,9 +214,13 @@ export const useGameStore = defineStore("game", {
             launchId: "",
             state: "",
             expend: useLocalStorage("game_expend", false),
+            lastLaunch: useLocalStorage("game_last_launch", 0),
         }
     },
     actions: {
+        test() {
+            setHotkey("1")
+        },
         /** 选择上一个 */
         selectPrev() {
             if (!this.accounts) return false
@@ -428,6 +434,10 @@ export const useGameStore = defineStore("game", {
         },
 
         async launchGame() {
+            if (Date.now() > this.lastLaunch && Date.now() - this.lastLaunch < 1000) {
+                return
+            }
+            this.lastLaunch = Date.now()
             this.launchId = nanoid(10)
             // if (this.running) await killGame()
             const account = this.selected ? await db.gameAccounts.get(this.selected) : null

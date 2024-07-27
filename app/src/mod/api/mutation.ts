@@ -1,37 +1,12 @@
 import { AnyVariables, gql, OperationContext } from "@urql/vue"
-import { gqClient } from "../http/graphql"
-
-type Whitespace =
-    | "\u{9}" // '\t'
-    | "\u{A}" // '\n'
-    | "\u{20}" // ' '
-
-type TrimLeft<V extends string> = V extends `${Whitespace}${infer R}` ? TrimLeft<R> : V
-
-type TrimRight<V extends string> = V extends `${infer R}${Whitespace}` ? TrimRight<R> : V
-
-type Trim<V extends string> = TrimLeft<TrimRight<V>>
-
-type Split<S extends string, Delimiter extends string> = S extends `${infer Head}${Delimiter}${infer Tail}`
-    ? [Head, ...Split<Tail, Delimiter>]
-    : S extends Delimiter
-    ? []
-    : [S]
-
-type FirstWord<T extends string> = T extends `${infer A}${Whitespace}${infer _}` ? A : T
-
-type ExtractName<T extends string> = T extends `${infer _}mutation ${infer _}\n${infer Rest}`
-    ? Split<FirstWord<Trim<Rest>>, "(">[0] extends string
-        ? Trim<Split<FirstWord<Trim<Rest>>, "(">[0]>
-        : ""
-    : ""
+import { gqClient } from "./graphql"
 
 function extractType<T extends string>(gqlQuery: T) {
     const match = gqlQuery.match(/mutation[\s\S]*?\s(\w+?)\s*\(/m)
     if (match) {
-        return match[1] as ExtractName<T>
+        return match[1]
     }
-    return "" as ExtractName<T>
+    return ""
 }
 
 function namedMutation<R = { id: string }, G extends string = string>(gqlQuery: G) {
@@ -256,6 +231,37 @@ export const rtcJoinMutation = namedMutation<{
                     name
                     qq
                 }
+            }
+        }
+    }
+`)
+
+export interface RoomInfo {
+    id: string
+    name: string
+    type: string
+    maxUsers: number
+    createdAt: string
+    updateAt: string
+    msgCount: number
+    onlineUsers: {
+        id: string
+        name: string
+        qq: string
+    }[]
+}
+
+export const joinRoomMutation = namedMutation<RoomInfo>(/* GraphQL */ `
+    mutation ($id: String!) {
+        joinRoom(id: $id) {
+            id
+            name
+            type
+            msgCount
+            onlineUsers {
+                id
+                name
+                qq
             }
         }
     }

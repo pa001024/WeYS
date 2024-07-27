@@ -17,6 +17,7 @@ export const useUIStore = defineStore("ui", {
         return {
             sidebarExpand: false,
             loading: false,
+            schatTitle: "",
             tabs: [
                 {
                     name: "home",

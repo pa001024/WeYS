@@ -2,11 +2,13 @@
 import { onMounted, watchEffect } from "vue"
 import ResizeableWindow from "./components/ResizeableWindow.vue"
 import { useSettingStore } from "./mod/state/setting"
+import { useUIStore } from "./mod/state/ui"
 import { useRoute } from "vue-router"
 import { provideClient } from "@urql/vue"
-import { gqClient } from "./mod/http/graphql"
+import { gqClient } from "./mod/api/graphql"
 import { env } from "./env"
 const setting = useSettingStore()
+const ui = useUIStore()
 const route = useRoute()
 watchEffect(() => {
     document.body.setAttribute("data-theme", setting.theme)
@@ -150,7 +152,13 @@ if (env.isApp) {
 
 <template>
     <canvas class="fixed w-full h-full z-0 bg-indigo-300" id="background" v-if="!env.isApp"></canvas>
-    <ResizeableWindow :title="$t(`${String(route.name)}.title`)" darkable pinable id="main-window" :class="{ 'is-app': env.isApp }">
+    <ResizeableWindow
+        :title="route.name === 'schat' ? ui.schatTitle : $t(`${String(route.name)}.title`)"
+        darkable
+        pinable
+        id="main-window"
+        :class="{ 'is-app': env.isApp }"
+    >
         <RouterView v-slot="{ Component, route }">
             <transition name="slide-right">
                 <KeepAlive v-if="route.meta.keepAlive">

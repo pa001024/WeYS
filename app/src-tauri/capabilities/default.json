@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "schat"
   ],
   "permissions": [
     "path:default",
@@ -15,6 +16,11 @@
     "menu:default",
     "tray:default",
     "shell:allow-open",
+    "window:allow-create",
+    "window:allow-close",
+    "window:allow-set-decorations",
+    "webview:allow-create-webview",
+    "webview:allow-create-webview-window",
     "window:allow-set-size",
     "window:allow-set-title",
     "window:allow-set-fullscreen",

@@ -1,6 +1,7 @@
 use std::{ffi::c_void, time::Duration};
 
 use serde::{Deserialize, Serialize};
+use slider::cap_slide;
 use tauri::{
     plugin::{Builder, TauriPlugin},
     AppHandle, Emitter, Runtime,
@@ -10,6 +11,7 @@ use winreg::{enums::*, RegKey, RegValue};
 use self::util::*;
 use game::GameControl;
 mod game;
+mod slider;
 mod util;
 
 const GAME_PROCESS: &str = "YuanShen.exe";
@@ -22,15 +24,26 @@ struct LoginPayload {
 
 // 自动切世界权限
 #[tauri::command]
-async fn auto_open() -> bool {
+async fn auto_open(state: i32, post: bool) -> bool {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
         let interval = Duration::from_millis(100);
-        let ctl = GameControl::new(hwnd);
-        ctl.focus();
+        let ctl = GameControl::new(hwnd, post);
+        if !post {
+            ctl.SetFocus();
+        }
+        if post {
+            ctl.PostClick(469, 840); // 世界权限
+        } else {
+            ctl.Click(469, 840); // 世界权限
+        }
         tokio::time::sleep(interval).await;
-        ctl.Click(469, 840); // 世界权限
-        tokio::time::sleep(interval).await;
-        ctl.Click(485, 735); // 直接加入
+        match state {
+            1 => ctl.Click(485, 735), // 直接加入
+            2 => ctl.Click(473, 785), // 确认后可加入
+            3 => ctl.Click(457, 686), // 无法加入
+            _ => {}
+        }
+
         true
     } else {
         false
@@ -45,8 +58,8 @@ async fn auto_join(uid: String) -> bool {
     let interval = Duration::from_millis(100);
     let interval2 = Duration::from_millis(10);
     if let Some(hwnd) = get_window_by_process(pid) {
-        let ctl = GameControl::new(hwnd);
-        ctl.focus();
+        let ctl = GameControl::new(hwnd, false);
+        ctl.SetFocus();
         if !ctl.isNormalSize() {
             set_clipboard_text(uid.as_str());
             return false;
@@ -54,14 +67,14 @@ async fn auto_join(uid: String) -> bool {
         while elapsed <= timeout {
             if enter_f2(&ctl) {
                 // UID搜索结果不唯一
-                while ctl.CheckColor(1332, 257, "3.3.3.") {
+                while ctl.HuColor(1332, 257, 0x333333) {
                     ctl.Click(82, 179);
                     ctl.Wheel(1);
                     tokio::time::sleep(interval2).await;
                 }
                 println!("粘贴UID");
                 while elapsed <= timeout {
-                    if ctl.CheckColor(1332, 361, "FFFFFF") {
+                    if ctl.EqColor(1332, 361, 0xFFFFFF) {
                         set_clipboard_text(uid.as_str());
                         tokio::time::sleep(interval2).await;
                         elapsed += interval2;
@@ -231,10 +244,10 @@ fn unlockfps(pid: isize) -> bool {
 #[tauri::command]
 async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pwd: String) {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
-        let ctl = GameControl::new(hwnd);
+        let ctl = GameControl::new(hwnd, false);
         // 适龄提示
         println!("自动登录");
-        if !ctl.WaitColor(1510, 70, "1.[89].[CD].|0.4.6.", 30.) {
+        if !ctl.WaitEqColor2(1510, 70, 0x148BCE, 0x0A4566, 30.) {
             println!("登录超时");
             let _ = app.emit(
                 "game_login",
@@ -246,7 +259,8 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
             return;
         }
         println!("登录开始");
-        if !ctl.CheckColor(1510, 70, "1.[89].[CD].") {
+        // 判断登陆框
+        if !ctl.EqColor(1510, 70, 0x148BCE) {
             println!("需输入密码");
             let _ = app.emit(
                 "game_input",
@@ -255,9 +269,8 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
                     success: true,
                 },
             );
-            ctl.focus();
             ctl.Sleep(100);
-            ctl.WaitColor(626, 274, "FFFFFF", 5.); // 登陆框
+            ctl.WaitEqColor(626, 274, 0xFFFFFF, 5.); // 登陆框
             ctl.Click(971, 348);
             ctl.Sleep(100);
             ctl.SendText(login.as_str());
@@ -266,11 +279,39 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
             ctl.Sleep(100);
             ctl.SendText(pwd.as_str());
             ctl.Sleep(300);
-            if !ctl.CheckColor(580, 505, "DEBC60") {
+            if !ctl.EqColor(580, 505, 0xDEBC60) {
                 ctl.Click(581, 514);
                 ctl.Sleep(100);
             }
             ctl.Click(973, 580);
+            sleep(200);
+        }
+        let now = std::time::Instant::now();
+        let timeout = Duration::from_secs(30);
+        while now.elapsed() < timeout {
+            // 循环判断登录成功
+            if ctl.WaitEqColor(1510, 70, 0x148BCE, 1.) {
+                break;
+            }
+            // 登陆框灰色 说明有滑块
+            if ctl.WaitEqColor(603, 250, 0x7E7E7E, 1.) && ctl.EqColor(667, 271, 0xFFFFFF) {
+                // 点击此处重试
+                if ctl.EqColor(855, 503, 0x8A9DCA) || ctl.EqColor(855, 503, 0xA0B1D9) {
+                    ctl.Click(869, 504);
+                    sleep(1000);
+                }
+                // 判断滑块框
+                if ctl.WaitEqColor(888, 514, 0xDFE1E2, 1.) {
+                    sleep(300);
+                    auto_slide(hwnd);
+                }
+            }
+
+            ctl.Click(973, 580);
+        }
+        if now.elapsed() >= timeout {
+            let _ = app.emit("game_enter", LoginPayload { id, success: false });
+            return;
         }
         let _ = app.emit(
             "game_ready",
@@ -287,9 +328,9 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
             let timeout = Duration::from_secs(30);
 
             while now.elapsed() < timeout {
-                if ctl.CheckColor(761, 827, "FFFFFF") {
-                    ctl.PostClick(819, 838);
-                } else if !ctl.CheckColor(677, 297, "FFFFFF") {
+                if ctl.EqColor(761, 827, 0xFFFFFF) {
+                    ctl.Click(819, 838);
+                } else if !ctl.EqColor(677, 297, 0xFFFFFF) {
                     ctl.PostClickLazy(819, 838);
                 }
                 let rst = get_uid();
@@ -301,14 +342,14 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
                 }
             }
         } else {
-            if ctl.WaitColor(761, 827, "FFFFFF", 20.) {
+            if ctl.WaitEqColor(761, 827, 0xFFFFFF, 20.) {
                 ctl.PostClick(819, 838);
                 // 等待加载完毕
                 println!("等待加载");
                 let now = std::time::Instant::now();
                 let timeout = Duration::from_secs(30);
                 while now.elapsed() < timeout {
-                    ctl.PostClickLazy(819, 838);
+                    ctl.Click(819, 838);
                     let rst = get_uid();
                     sleep(200);
                     if !rst.uid.is_empty() {
@@ -324,11 +365,11 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
 }
 
 #[tauri::command]
-async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool) {
+async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool, post: bool) {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
-        let ctl = GameControl::new(hwnd);
-        ctl.WaitColor(51, 85, "4.6.A.", 40.);
-        ctl.focus();
+        let ctl = GameControl::new(hwnd, post);
+        ctl.WaitHuColor(72, 33, 0xE9C48F, 40.);
+        // ctl.focus();
         ctl.Sleep(100);
         let _ = app.emit(
             "game_login",
@@ -337,19 +378,18 @@ async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool) {
                 success: true,
             },
         );
-        if ctl.WaitColor(77, 49, "FFFFFF", 2.) // 主界面
-                            && ctl.CheckColor(385, 58, "FFFFFF")
+        if ctl.WaitEqColor(77, 49, 0xFFFFFF, 2.) // 主界面
+                            && ctl.EqColor(385, 58, 0xFFFFFF)
         // F2为白色
         {
             println!("成功加载");
             ctl.Click(385, 58); // 点击F2
-            if ctl.WaitColor(469, 840, "ECE5D8", 2.) {
+            if ctl.WaitEqColor(469, 840, 0xECE5D8, 2.) {
                 println!("设置权限");
                 ctl.Click(469, 840); // 世界权限
                 ctl.Sleep(100);
                 if autosend {
                     ctl.Click(457, 686); // 无法加入
-                                         // ctl.Click(473, 785); // 确认后可加入
                 } else {
                     ctl.Click(485, 735); // 直接加入
                 }
@@ -510,7 +550,7 @@ async fn get_game(is_run: bool) -> bool {
 #[tauri::command]
 fn is_ingame() -> bool {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
-        let ctl = GameControl::new(hwnd);
+        let ctl = GameControl::new(hwnd, false);
         ctl.isForeground()
     } else {
         false
@@ -524,6 +564,65 @@ fn set_hotkey<R: Runtime>(app: AppHandle<R>, key: String) -> bool {
     // }
     // set_keyboard_hook(keyboard_hook);
     true
+}
+
+/// 自动验证码
+fn auto_slide(hwnd: isize) {
+    fn ease_out_quart(x: f32) -> f32 {
+        1. - (1. - x).powi(4)
+    }
+
+    fn get_tracks(distance: f32, seconds: f32) -> Vec<i32> {
+        let mut tracks = vec![0];
+        let mut last = 0;
+        let mut t = 0.0;
+        while t < seconds {
+            let current = (ease_out_quart(t / seconds) * distance) as i32;
+            tracks.push(current - last);
+            last = current;
+            t += 0.1;
+        }
+        tracks
+    }
+
+    fn ease_move(x: i32, t: f32) {
+        let tx = x.abs() as f32;
+        let tracks: Vec<i32> = get_tracks(tx, t);
+        if x > 0 {
+            for track in tracks {
+                mouse_move(track, 0);
+                sleep(20);
+            }
+        } else {
+            for track in tracks {
+                mouse_move(-track, 0);
+                sleep(20);
+            }
+        }
+    }
+
+    let tx = (cap_slide(hwnd) as f32 * 1.05) as i32;
+    if tx > 0 {
+        let ctl = GameControl::new(hwnd, false);
+        ctl.SavePos();
+        ctl.MouseMove(719, 512);
+        mouse_down();
+        loop {
+            let pos = ctl.MouseGetPos();
+            let nx = pos.0 - 719 - 40;
+            sleep(20);
+            if nx.abs_diff(tx) < 5 {
+                break;
+            }
+            if tx - nx > 500 {
+                break;
+            }
+            ease_move((tx - nx).min(100), 1.);
+        }
+        mouse_up();
+        sleep(20);
+        ctl.RestorePos();
+    }
 }
 
 pub fn init<R: Runtime>() -> TauriPlugin<R> {

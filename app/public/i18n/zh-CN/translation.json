@@ -43,7 +43,11 @@
     "autoSend": "自动发饭",
     "send": "手动发饭",
     "autoNext": "失败跳过",
-    "onlyEnd": "仅结束"
+    "onlyEnd": "仅结束",
+    "autoNextTip": "登录超时后自动切下一个账号",
+    "onlyEndTip": "房间点击结束后才会切号",
+    "openschat": "打开",
+    "openschatTip": "打开独立聊天窗口"
   },
   "chat": {
     "title": "聊天",
@@ -79,7 +83,10 @@
     "autoJoin": "自动加入",
     "copy": "复制",
     "micOn": "开启麦克风",
-    "keyboardShortcut": "快捷键 (Ctrl+Shift+R)"
+    "keyboardShortcut": "快捷键加入|右键设置键位",
+    "keyboardShortcutSetting": "快捷键设置",
+    "joinFailed": "加入失败",
+    "joinFailedTip": "可能是房间已满"
   },
   "user": {
     "title": "用户",
@@ -110,7 +117,7 @@
     "windowTrasnparentTip": "窗口和表面显示半透明",
     "minCountIntervalTip": "单位: 秒",
     "login": "账号",
-    "loginTip": "登录后可保存数据",
+    "loginTip": "登录后可使用在线服务",
     "email": "邮箱",
     "password": "密码",
     "save": "保存",
@@ -120,7 +127,8 @@
     "new_password": "新密码",
     "logout": "登出",
     "guest": "游客",
-    "guestTip": "无需登录即可使用"
+    "guestTip": "无需登录即可使用",
+    "winMaterial": "窗口材质"
   },
   "misc": {
     "all_files": "所有文件",

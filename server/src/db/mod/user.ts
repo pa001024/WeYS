@@ -36,6 +36,12 @@ export const typeDefs = /* GraphQL */ `
         user: User
     }
 
+    type TinyUser {
+        id: String!
+        name: String!
+        qq: String
+    }
+
     input UsersUpdateInput {
         name: String
         qq: String

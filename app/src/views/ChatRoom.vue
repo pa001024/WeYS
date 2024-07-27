@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { useTimestamp } from "@vueuse/core"
+import { until, useTimestamp } from "@vueuse/core"
 import { useScroll } from "@vueuse/core"
 import { useSound } from "@vueuse/sound"
-import { computed, onMounted, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from "vue"
 import { isImage, sanitizeHTML } from "../mod/util/html"
 import { gql, useQuery, useSubscription } from "@urql/vue"
 import { useRoute } from "vue-router"
@@ -12,18 +12,33 @@ import { env } from "../env"
 import { copyContent, copyText, pasteText } from "../mod/util/copy"
 import { useRTC } from "../mod/api/rtc"
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut"
+import { useUIStore } from "../mod/state/ui"
 
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
 const user = useUserStore()
+const ui = useUIStore()
 const newMsgTip = ref(true)
 const newMsgJoin = ref(true)
 const keyboardShortcut = ref(false)
+const keyboardShortcutSetting = reactive({
+    open: false,
+    ctrl: true,
+    shift: true,
+    alt: false,
+    key: "R",
+})
 let lastTask: Task | null = null
+
+// const
 
 watch(keyboardShortcut, async (enable) => {
     if (enable) {
-        register("CmdOrControl+Shift+R", (e) => {
+        let key = keyboardShortcutSetting.key
+        if (keyboardShortcutSetting.alt) key = "Alt+" + key
+        if (keyboardShortcutSetting.shift) key = "Shift+" + key
+        if (keyboardShortcutSetting.ctrl) key = "CmdOrControl+" + key
+        await register(key, (e) => {
             if (e.state === "Pressed") {
                 if (lastTask) {
                     autoJoinGame(lastTask)
@@ -43,26 +58,38 @@ const el = ref<HTMLElement | null>(null)
 
 const { arrivedState } = useScroll(el, { offset: { left: 0, top: 20, right: 0, bottom: 200 } })
 
-const { data } = useQuery<{ roomMsgCount: { msgCount: number } }>({
+const { data } = useQuery<{
+    room: {
+        id: string
+        name: string
+        maxUsers: number
+        msgCount: number
+    }
+}>({
     query: gql`
         query ($roomId: String!) {
-            roomMsgCount(roomId: $roomId) {
+            room(id: $roomId) {
                 id
+                name
+                maxUsers
                 msgCount
             }
         }
     `,
     variables: { roomId },
-    requestPolicy: "cache-only",
+    requestPolicy: "cache-first",
 })
-const msgCount = computed(() => data.value?.roomMsgCount?.msgCount || 0)
-watch(msgCount, (count) => {
-    if (msgCount.value > 0) {
-        user.setRoomReadedCount(roomId.value, count)
-    }
+const isJoined = computed(() => !!data.value?.room || false)
+const msgCount = computed(() => data.value?.room?.msgCount || 0)
+const title = computed(() => data.value?.room?.name || "")
+const maxUsers = computed(() => data.value?.room?.maxUsers || 0)
+
+watchEffect(() => {
+    if (msgCount.value) user.setRoomReadedCount(roomId.value, msgCount.value)
+    if (title.value) ui.schatTitle = maxUsers.value ? `${title.value} (${maxUsers.value})` : `${title.value}`
 })
 
-const { micOn } = useRTC(roomId)
+const { micOn, loaded } = useRTC(roomId)
 onMounted(async () => {
     if (msgCount.value > 0) user.setRoomReadedCount(roomId.value, msgCount.value)
 })
@@ -376,7 +403,7 @@ async function autoJoinGame(task: Task) {
 <template>
     <div class="w-full h-full bg-base-200/50 flex">
         <!-- 聊天窗口 -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <div v-if="isJoined && loaded" class="flex-1 flex flex-col overflow-hidden">
             <!-- 主内容区 -->
             <div class="flex-1 flex flex-col overflow-hidden relative">
                 <div class="flex flex-col gap-2 absolute left-0 right-0 justify-center z-10 p-4">
@@ -543,7 +570,19 @@ async function autoJoinGame(task: Task) {
                 v-slot="{ data }"
             >
                 <div v-if="data" class="flex items-center p-1 gap-1">
-                    <div v-for="item in data.rtcClients" :key="item.id" class="flex group bg-primary items-center rounded-full px-1">
+                    <div class="flex group bg-primary items-center rounded-full px-1">
+                        <QQAvatar class="size-6 my-1" :name="user.name!" :qq="user.qq!" />
+                        <div
+                            class="flex text-sm text-base-100 max-w-0 group-hover:max-w-24 group-hover:mx-1 overflow-hidden transition-all duration-500 whitespace-nowrap"
+                        >
+                            {{ user.name }}
+                        </div>
+                    </div>
+                    <div
+                        v-for="item in data.rtcClients.filter((v:any) => v.user.id !== user.id)"
+                        :key="item.id"
+                        class="flex group bg-primary items-center rounded-full px-1"
+                    >
                         <QQAvatar class="size-6 my-1" :name="item.user.name" :qq="item.user.qq" />
                         <div
                             class="flex text-sm text-base-100 max-w-0 group-hover:max-w-24 group-hover:mx-1 overflow-hidden transition-all duration-500 whitespace-nowrap"
@@ -609,15 +648,105 @@ async function autoJoinGame(task: Task) {
                             <Icon icon="la:microphone-solid" />
                         </div>
                     </Tooltip>
-                    <Tooltip v-if="env.isApp" side="top" :tooltip="$t('chat.keyboardShortcut')">
-                        <div
-                            class="btn btn-ghost btn-sm btn-square text-xl"
-                            :class="{ 'text-primary': keyboardShortcut }"
-                            @click="keyboardShortcut = !keyboardShortcut"
-                        >
-                            <Icon icon="la:keyboard" />
-                        </div>
-                    </Tooltip>
+
+                    <Popover
+                        v-model="keyboardShortcutSetting.open"
+                        :title="$t('chat.keyboardShortcutSetting')"
+                        noconfirm
+                        @contextmenu.prevent="keyboardShortcutSetting.open = true"
+                    >
+                        <Tooltip v-if="env.isApp" side="top" :tooltip="$t('chat.keyboardShortcut')">
+                            <div
+                                class="btn btn-ghost btn-sm btn-square text-xl"
+                                :class="{ 'text-primary': keyboardShortcut }"
+                                @click.stop="keyboardShortcut = !keyboardShortcut"
+                            >
+                                <Icon icon="la:keyboard" />
+                            </div>
+                        </Tooltip>
+                        <template #content>
+                            <div class="form-control p-2">
+                                <div class="label">
+                                    <span class="label-text">Ctrl</span>
+                                    <input v-model="keyboardShortcutSetting.ctrl" type="checkbox" class="toggle toggle-secondary" />
+                                </div>
+                                <div class="label">
+                                    <span class="label-text">Shift</span>
+                                    <input v-model="keyboardShortcutSetting.shift" type="checkbox" class="toggle toggle-secondary" />
+                                </div>
+                                <div class="label">
+                                    <span class="label-text">Alt</span>
+                                    <input v-model="keyboardShortcutSetting.alt" type="checkbox" class="toggle toggle-secondary" />
+                                </div>
+                                <div class="label">
+                                    <span class="label-text">Key</span>
+                                    <Select v-model="keyboardShortcutSetting.key">
+                                        <SelectItem
+                                            v-for="key in [
+                                                'A',
+                                                'B',
+                                                'C',
+                                                'D',
+                                                'E',
+                                                'F',
+                                                'G',
+                                                'H',
+                                                'I',
+                                                'J',
+                                                'K',
+                                                'L',
+                                                'M',
+                                                'N',
+                                                'O',
+                                                'P',
+                                                'Q',
+                                                'R',
+                                                'S',
+                                                'T',
+                                                'U',
+                                                'V',
+                                                'W',
+                                                'X',
+                                                'Y',
+                                                'Z',
+                                                '0',
+                                                '1',
+                                                '2',
+                                                '3',
+                                                '4',
+                                                '5',
+                                                '6',
+                                                '7',
+                                                '8',
+                                                '9',
+                                                'F1',
+                                                'F2',
+                                                'F3',
+                                                'F4',
+                                                'F5',
+                                                'F6',
+                                                'F7',
+                                                'F8',
+                                                'F9',
+                                                'F10',
+                                                'F11',
+                                                'F12',
+                                                'Insert',
+                                                'Delete',
+                                                'Home',
+                                                'End',
+                                                'PgUp',
+                                                'PgDown',
+                                            ]"
+                                            :key="key"
+                                            :value="key"
+                                            >{{ key }}</SelectItem
+                                        >
+                                    </Select>
+                                </div>
+                            </div>
+                        </template>
+                    </Popover>
                 </div>
                 <!-- 输入框 -->
                 <RichInput
@@ -634,6 +763,13 @@ async function autoJoinGame(task: Task) {
                     <button class="btn btn-sm btn-primary px-6">{{ $t("chat.send") }}</button>
                 </div>
             </form>
+        </div>
+        <div v-else-if="loaded" class="flex-1 flex flex-col gap-2 items-center justify-center">
+            <div class="text-bold">{{ $t("chat.joinFailed") }}</div>
+            <div class="text-sm text-base-content/50">{{ $t("chat.joinFailedTip") }}</div>
+        </div>
+        <div v-else class="flex-1 flex flex-col gap-2 items-center justify-center">
+            <span class="loading loading-spinner loading-md"></span>
         </div>
     </div>
 </template>

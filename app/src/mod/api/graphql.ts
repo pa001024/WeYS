@@ -15,7 +15,7 @@ const storage = makeDefaultStorage({
 const cacheExchange = offlineExchange({
     resolvers: {
         Query: {
-            roomMsgCount: (data, args, cache, _info) => {
+            msgCount: async (data, args, cache, _info) => {
                 const roomCache = cache.readFragment<{ id: string; msgCount?: number }>(
                     gql`
                         fragment _ on Room {
@@ -25,11 +25,8 @@ const cacheExchange = offlineExchange({
                     `,
                     { id: args.roomId as any }
                 )
-                return {
-                    __typename: "Room",
-                    id: args.roomId,
-                    msgCount: roomCache?.msgCount || 0,
-                }
+                if (roomCache) return roomCache.msgCount
+                return 0
             },
         },
     },
@@ -75,7 +72,8 @@ const cacheExchange = offlineExchange({
                     },
                     (data) => {
                         if (!data) return { rtcClients: [] }
-                        if (data.rtcClients.some((v) => v.id !== newRtc.id)) {
+                        const user = useUserStore()
+                        if (newRtc.user.id !== user.id && data.rtcClients.some((v) => v.id !== newRtc.id)) {
                             data.rtcClients.push(newRtc)
                         }
                         return data
@@ -84,8 +82,13 @@ const cacheExchange = offlineExchange({
             },
         },
         Subscription: {
-            newRtc(result: { newRtc: { id: string; end: boolean; user: { id: string; name: string; qq: string } } }, args, cache, _info) {
-                const newRtc = result.newRtc
+            newRoomUser(
+                result: { newRoomUser: { id: string; end: boolean; user: { id: string; name: string; qq: string } } },
+                args,
+                cache,
+                _info
+            ) {
+                const newRoomUser = result.newRoomUser
 
                 cache.updateQuery<{
                     rtcClients: {
@@ -109,16 +112,16 @@ const cacheExchange = offlineExchange({
                         variables: { roomId: args.roomId },
                     },
                     (data) => {
-                        if (newRtc.end) {
+                        if (newRoomUser.end) {
                             if (!data) return { rtcClients: [] }
-                            data.rtcClients = data.rtcClients.filter((v: any) => v.id !== newRtc.id)
+                            data.rtcClients = data.rtcClients.filter((v: any) => v.id !== newRoomUser.id)
                         } else {
-                            if (!data) return { rtcClients: [newRtc] }
-                            if (data.rtcClients.some((v) => v.id !== newRtc.id)) {
-                                data.rtcClients.push(newRtc)
+                            if (!data) return { rtcClients: [newRoomUser] }
+                            if (data.rtcClients.some((v) => v.id !== newRoomUser.id)) {
+                                data.rtcClients.push(newRoomUser)
                             }
                         }
-                        console.log("newRtc", data)
+                        console.log("newRoomUser", data)
                         return data
                     }
                 )

@@ -6,16 +6,17 @@ import Game from "./views/Game.vue"
 import User from "./views/User.vue"
 import Chat from "./views/Chat.vue"
 import ChatRoom from "./views/ChatRoom.vue"
+import SingleChatRoom from "./views/SingleChatRoom.vue"
 import Download from "./views/Download.vue"
 import { env } from "./env"
+import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window"
 
 let setMinSize = async (_w: number, _h: number) => {}
 
 ;(async () => {
     if (!env.isApp) return
-    const { LogicalSize, getCurrent } = await import("@tauri-apps/api/window")
     setMinSize = async (w: number, h: number) => {
-        const win = getCurrent()
+        const win = getCurrentWindow()
         win.setMinSize(new LogicalSize(w, h))
         const size = await win.innerSize()
         const factor = await win.scaleFactor()
@@ -26,7 +27,7 @@ let setMinSize = async (_w: number, _h: number) => {}
 
 const routes: readonly RouteRecordRaw[] = [
     { name: "home", path: "/", component: Home, beforeEnter: () => setMinSize(367, 430) },
-    { name: "game", path: "/game", component: Game, beforeEnter: () => setMinSize(572, 500) },
+    { name: "game", path: "/game", component: Game, beforeEnter: () => setMinSize(650, 576) },
     { name: "download", path: "/download", component: Download, beforeEnter: () => setMinSize(572, 500) },
     {
         name: "chat",
@@ -36,6 +37,16 @@ const routes: readonly RouteRecordRaw[] = [
         meta: { keepAlive: true },
         children: [
             { name: "room", path: ":room", component: ChatRoom }, //
+        ],
+    },
+    {
+        name: "schat",
+        path: "/schat",
+        component: SingleChatRoom,
+        beforeEnter: () => setMinSize(367, 430),
+        meta: { keepAlive: true },
+        children: [
+            { name: "sroom", path: ":room", component: ChatRoom }, //
         ],
     },
     { name: "user", path: "/user", component: User, beforeEnter: () => setMinSize(367, 430) },

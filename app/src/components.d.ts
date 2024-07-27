@@ -29,6 +29,7 @@ declare module 'vue' {
     GQAutoPage: typeof import('./components/GQAutoPage.vue')['default']
     GQQuery: typeof import('./components/GQQuery.vue')['default']
     Icon: typeof import('./components/Icon.vue')['default']
+    LocalQQ: typeof import('./components/LocalQQ.vue')['default']
     Popover: typeof import('./components/Popover.vue')['default']
     PopoverArrow: typeof import('radix-vue')['PopoverArrow']
     PopoverClose: typeof import('radix-vue')['PopoverClose']

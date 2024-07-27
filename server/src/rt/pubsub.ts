@@ -2,7 +2,7 @@ import { createPubSub } from "graphql-yoga"
 import type { msgs, tasks, users } from "../db/schema"
 import type { JWTUser } from "../db/yoga"
 
-export interface RtcClient {
+export interface RoomUserEvent {
     id: string
     end: boolean
     user: JWTUser
@@ -16,6 +16,7 @@ export interface RtcEvent {
     body: string
 }
 
+
 type RoomEvent = {
     newMessage: typeof msgs.$inferSelect
     newReaction: typeof msgs.$inferSelect
@@ -24,9 +25,8 @@ type RoomEvent = {
     userLeaved: typeof users.$inferSelect
     newTask: typeof tasks.$inferSelect
     updateTask: typeof tasks.$inferSelect
-    newRtc: RtcClient
-    endRtc: RtcClient
     newRtcEvent: RtcEvent
+    newRoomUser: RoomUserEvent
 }
 
 // type REvents<T extends Record<string, unknown>, L extends string = keyof T extends string ? keyof T : never> = {

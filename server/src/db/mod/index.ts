@@ -3,6 +3,7 @@ import { typeDefs as messageSchema, resolvers as messageResolvers } from "./mess
 import { typeDefs as roomSchema, resolvers as roomResolvers } from "./room"
 import { typeDefs as taskSchema, resolvers as taskResolvers } from "./task"
 import { typeDefs as rtcSchema, resolvers as rtcResolvers } from "./rtc"
+import { FieldNode, Kind, type GraphQLResolveInfo } from "graphql"
 
 export function schemaWith(ctx: any) {
     const typeDefs = [userSchema, messageSchema, roomSchema, taskSchema, rtcSchema]
@@ -36,34 +37,41 @@ export function schemaWith(ctx: any) {
 }
 
 // util
-export const getSubSelection = (info: any, subKey: string = "msgs") => {
-    if (info.fieldNodes.length > 0) {
-        const field = info.fieldNodes[0]
-        if (field.selectionSet) {
-            for (const selection of field.selectionSet.selections) {
-                if (selection.name.value === subKey) {
-                    return new SubSelection(selection)
+export const getSubSelection = (info: GraphQLResolveInfo, subKey: string = "msgs") => {
+    function getSub(p: FieldNode, key: string) {
+        if (p.selectionSet) {
+            for (const selection of p.selectionSet.selections) {
+                if (selection.kind === Kind.FIELD && selection.name.value === key) {
+                    return selection
                 }
             }
         }
     }
-    return
+    const subarray = subKey.split(".")
+    if (subarray.length === 0) return
+    let field = info.fieldNodes[0]
+    for (const key of subarray) {
+        const sub = getSub(field, key)
+        if (!sub) return
+        field = sub
+    }
+    return new SubSelection(field)
 }
 
 export class SubSelection {
-    constructor(public selection: any) {}
+    constructor(public selection: FieldNode) {}
 
     hasArg(name: string) {
-        return this.selection.arguments.some((arg: any) => arg.name.value === name)
+        return this.selection.arguments?.some((arg: any) => arg.name.value === name)
     }
 
     getArg(name: string) {
-        const arg = this.selection.arguments.find((arg: any) => arg.name.value === name)
-        return arg ? arg.value.value : null
+        const arg = this.selection.arguments?.find((arg: any) => arg.name.value === name)
+        return arg ? (arg.value as any).value : null
     }
 
     args() {
-        return this.selection.arguments.reduce((acc: any, arg: any) => {
+        return this.selection.arguments?.reduce((acc: any, arg: any) => {
             acc[arg.name.value] = arg.value.value
             return acc
         }, {})

@@ -24,14 +24,15 @@ export async function setUsd(usk: string, usd: string) {
 export async function autoJoin(uid: string) {
     return (await invoke("plugin:game|auto_join", { uid })) as boolean
 }
-export async function autoOpen() {
-    return (await invoke("plugin:game|auto_open")) as boolean
+// 1:自动 2:请求 3:关门
+export async function autoOpen(state = 1, post = false) {
+    return (await invoke("plugin:game|auto_open", { state, post })) as boolean
 }
 export async function autoLogin(id: string, login = "", pwd = "") {
     return (await invoke("plugin:game|auto_login", { id, login, pwd })) as boolean
 }
-export async function autoSetup(id: string, autosend = false) {
-    return (await invoke("plugin:game|auto_setup", { id, autosend })) as boolean
+export async function autoSetup(id: string, autosend = false, post = false) {
+    return (await invoke("plugin:game|auto_setup", { id, autosend, post })) as boolean
 }
 export async function isIngame() {
     return (await invoke("plugin:game|is_ingame")) as boolean

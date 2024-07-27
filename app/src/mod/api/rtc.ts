@@ -1,26 +1,23 @@
 import { gql, useSubscription } from "@urql/vue"
 import { rtcJoinMutation, rtcSignalMutation } from "./mutation"
-import { MaybeRef, onMounted, onUnmounted, ref, watch } from "vue"
+import { MaybeRef, onMounted, onUnmounted, Ref, ref, watch } from "vue"
 import mitt from "mitt"
 import { useUserStore } from "../state/user"
 
 export function useRTC(roomId: MaybeRef<string>) {
-    let client = new RTCClient(typeof roomId === "string" ? roomId : roomId.value)
+    const loaded = ref(false)
+    let client = new RTCClient(typeof roomId === "string" ? roomId : roomId.value, loaded)
     const voiceOn = ref(true)
     const micOn = ref(false)
     watch(micOn, (newVal) => client.setMicOn(newVal))
     if (typeof roomId !== "string") {
         watch(roomId, (newVal) => {
             if (client) client.dispose()
-            client = new RTCClient(newVal)
+            client = new RTCClient(newVal, loaded)
         })
     }
 
-    return {
-        voiceOn,
-        micOn,
-        client,
-    }
+    return { loaded, voiceOn, micOn, client }
 }
 
 export class RTCClient {
@@ -33,9 +30,10 @@ export class RTCClient {
         candidate: RTCIceCandidateInit
     }>()
     localStream: MediaStream | null = null
-    constructor(public roomId: string) {
+    constructor(public roomId: string, public loaded: Ref<boolean>) {
+        loaded.value = false
         useSubscription<{
-            newRtc: {
+            newRoomUser: {
                 id: string
                 end: boolean
                 user: {
@@ -48,7 +46,7 @@ export class RTCClient {
             {
                 query: gql`
                     subscription ($roomId: String!) {
-                        newRtc(roomId: $roomId) {
+                        newRoomUser(roomId: $roomId) {
                             id
                             end
                             user {
@@ -62,9 +60,9 @@ export class RTCClient {
                 variables: { roomId },
             },
             (_, data) => {
-                const rtc = data.newRtc
+                const rtc = data.newRoomUser
                 if (rtc.id !== this.clientId) {
-                    console.log("[rtc] newRtc", data.newRtc)
+                    console.log("[rtc] newRtc", data.newRoomUser)
                     if (rtc.end) {
                         this.get(rtc.id)?.close()
                     } else {
@@ -112,7 +110,9 @@ export class RTCClient {
                 }, // 请求音频访问权限
             })
             this.setMicOn(false)
-            this.connect()
+            setTimeout(() => {
+                this.connect()
+            }, 100)
         })
         onUnmounted(async () => {
             this.dispose()
@@ -137,13 +137,14 @@ export class RTCClient {
         const user = useUserStore()
         if (rst) {
             this.clientId = rst.id
-            console.log("[rtc] join success", this.clientId)
+            console.log("[rtc] join success", this.clientId, rst.clients)
             for (const session of rst.clients) {
                 if (session.user.id !== user.id) {
                     let conn = this.createConnection(session.id)
                     conn.offer()
                 }
             }
+            this.loaded.value = true
         } else {
             throw new Error("join failed")
         }

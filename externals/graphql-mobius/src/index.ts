@@ -11,6 +11,7 @@
  */
 
 import type { Repeater } from "graphql-yoga";
+import { type GraphQLResolveInfo } from "graphql"
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 type Whitespace =
@@ -499,7 +500,7 @@ export type Resolver<
           parent: unknown,
           args: Args,
           context: Context,
-          info: unknown
+          info: GraphQLResolveInfo
         ) =>
           | MaybePromise<UndefinedToNullableFields<Returned>>
           | (Returned extends null ? void : never)
@@ -507,7 +508,7 @@ export type Resolver<
           parent: unknown,
           args: null | undefined | {},
           context: Context,
-          info: unknown
+          info: GraphQLResolveInfo
         ) =>
           | MaybePromise<UndefinedToNullableFields<T["Query"][K]>>
           | (T["Query"][K] extends null ? void : never);
@@ -524,7 +525,7 @@ export type Resolver<
             parent: unknown,
             args: Args,
             context: Context,
-            info: unknown
+            info: GraphQLResolveInfo
           ) =>
             | MaybePromise<UndefinedToNullableFields<Returned>>
             | (Returned extends null ? void : never)
@@ -532,7 +533,7 @@ export type Resolver<
             parent: unknown,
             args: null | undefined | {},
             context: Context,
-            info: unknown
+            info: GraphQLResolveInfo
           ) =>
             | MaybePromise<UndefinedToNullableFields<T["Mutation"][K]>>
             | (T["Mutation"][K] extends null ? void : never);
@@ -549,7 +550,7 @@ export type Resolver<
             parent: unknown,
             args: Args,
             context: Context,
-            info: unknown
+            info: GraphQLResolveInfo
           ) =>
             | MaybePromise<
                 MaybeRepeater<{ [k in K]: UndefinedToNullableFields<Returned> }>
@@ -559,7 +560,7 @@ export type Resolver<
             parent: unknown,
             args: null | undefined | {},
             context: Context,
-            info: unknown
+            info: GraphQLResolveInfo
           ) =>
             | MaybePromise<
                 MaybeRepeater<UndefinedToNullableFields<T["Subscription"][K]>>

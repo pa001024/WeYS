@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { window } from "@tauri-apps/api"
 import { invoke } from "@tauri-apps/api/core"
 import { exit } from "@tauri-apps/plugin-process"
 import { onMounted, onUnmounted, ref, watch, watchEffect } from "vue"
@@ -7,6 +6,10 @@ import { useSettingStore } from "../mod/state/setting"
 import Tooltip from "./Tooltip.vue"
 import Icon from "./Icon.vue"
 import { env } from "../env"
+import { useRoute } from "vue-router"
+import { getCurrentWindow } from "@tauri-apps/api/window"
+import { applyMaterial, getOSVersion } from "../mod/api/app"
+import { useUIStore } from "../mod/state/ui"
 
 const props = defineProps({
     title: { type: String },
@@ -20,15 +23,29 @@ const props = defineProps({
     draggable: { type: Boolean, default: true },
 })
 
-let appWindow: ReturnType<typeof window.getCurrent>
+let appWindow: ReturnType<typeof getCurrentWindow>
 
+const route = useRoute()
+const ui = useUIStore()
 const setting = useSettingStore()
 const alwaysOnTop = ref(false)
 const maximized = ref(false)
 const isDark = ref(setting.theme === "dark")
 
 if (env.isApp) {
-    appWindow = window.getCurrent()
+    appWindow = getCurrentWindow()
+    appWindow.setDecorations(false)
+    if (setting.winMaterial !== "Unset") {
+        applyMaterial(setting.winMaterial as any)
+    } else {
+        getOSVersion().then((ver) => {
+            if (ver.startsWith("11")) {
+                setting.setWinMaterial("Acrylic")
+            } else {
+                setting.setWinMaterial("Blur")
+            }
+        })
+    }
 
     watchEffect(() => {
         appWindow.setResizable(props.resizable)
@@ -52,8 +69,14 @@ async function handleMaximize() {
     state ? appWindow.unmaximize() : appWindow.maximize()
 }
 
-function handleClose() {
-    invoke("app_close").catch(() => exit())
+async function handleClose() {
+    const win = getCurrentWindow()
+
+    if (win.label === "main") {
+        invoke("app_close").catch(() => exit())
+    } else {
+        win.close()
+    }
 }
 
 watch(alwaysOnTop, async (newValue) => {
@@ -78,15 +101,14 @@ if (env.isApp) {
     <!-- Root -->
     <div class="relative w-full h-full flex overflow-hidden bg-base-100/30">
         <!-- SideBar -->
-        <slot name="sidebar"></slot>
-
+        <slot v-if="route.name !== 'sroom'" name="sidebar"></slot>
         <!-- Header -->
         <div className="relative flex flex-col overflow-hidden w-full h-full">
             <!-- ActionBar -->
             <div class="relative w-full h-10 pb-1 mt-1 flex items-center space-x-1 sm:space-x-2 pl-2 pr-1">
                 <div :data-tauri-drag-region="draggable" className="w-full h-full font-semibold text-2xl flex items-center space-x-2">
                     <img :src="icon" class="w-6 h-6" />
-                    <span className="max-[370px]:hidden text-sm">{{ title }}</span>
+                    <span className="max-[370px]:hidden text-sm">{{ route.name !== "sroom" ? title : ui.schatTitle }}</span>
                 </div>
                 <!-- fix resize shadow -->
                 <div class="pointer-events-none flex-none opacity-0 self-start transition-none" v-if="env.isApp">
@@ -142,10 +164,18 @@ if (env.isApp) {
                                 <Icon bold icon="ri:pushpin-fill" v-else />
                             </button>
                         </Tooltip>
-                        <button class="btn btn-ghost btn-sm btn-square disabled:bg-transparent" :disabled="!minimizable" @click="handleMinimize">
+                        <button
+                            class="btn btn-ghost btn-sm btn-square disabled:bg-transparent"
+                            :disabled="!minimizable"
+                            @click="handleMinimize"
+                        >
                             <Icon bold icon="codicon:chrome-minimize" />
                         </button>
-                        <button class="btn btn-ghost btn-sm btn-square disabled:bg-transparent" :disabled="!maximizable" @click="handleMaximize">
+                        <button
+                            class="btn btn-ghost btn-sm btn-square disabled:bg-transparent"
+                            :disabled="!maximizable"
+                            @click="handleMaximize"
+                        >
                             <Icon bold icon="codicon:chrome-maximize" v-if="!maximized" />
                             <Icon bold icon="codicon:chrome-restore" v-else />
                         </button>

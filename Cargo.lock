@@ -6466,12 +6466,15 @@ checksum = "53a85b86a771b1c87058196170769dd264f66c0782acf1ae6cc51bfd64b39082"
 
 [[package]]
 name = "weys-app"
-version = "0.1.0"
+version = "1.4.0"
 dependencies = [
  "crossbeam-channel",
+ "image 0.25.1",
  "lazy_static",
  "once_cell",
+ "rand 0.8.5",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "sysinfo",

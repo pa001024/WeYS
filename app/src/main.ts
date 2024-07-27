@@ -3,7 +3,6 @@ import "./style.css"
 import "animate.css"
 import i18next from "i18next"
 import I18NextVue from "i18next-vue"
-import { MotionPlugin } from "@vueuse/motion"
 // prevent rightclicks
 // window.addEventListener(
 //   "contextmenu",
@@ -24,8 +23,7 @@ import { initI18n } from "./i18n"
 import { createPinia } from "pinia"
 import { router } from "./router"
 const app = createApp(App)
-app.use(MotionPlugin)
-    .use(createPinia())
+app.use(createPinia())
     .use(I18NextVue, { i18next })
     .use(router)
     .directive("h-resize-for", (el, { value: { el: target, min, max } }) => {

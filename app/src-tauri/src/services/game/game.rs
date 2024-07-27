@@ -1,20 +1,23 @@
 use std::mem::zeroed;
 
 use windows_sys::Win32::{
-    Foundation::*, Graphics::Gdi::ClientToScreen, UI::WindowsAndMessaging::*,
+    Foundation::*,
+    Graphics::Gdi::{ClientToScreen, ScreenToClient},
+    UI::WindowsAndMessaging::*,
 };
 
 use super::util::*;
 
 pub struct GameControl {
     pub hwnd: HWND,
+    pub post: bool,
     pub w: u32,
     pub h: u32,
 }
 
 #[allow(non_snake_case, unused)]
 impl GameControl {
-    pub fn new(hwnd: HWND) -> Self {
+    pub fn new(hwnd: HWND, post: bool) -> Self {
         // set_foreground_window(hwnd);
         let mut rect = unsafe { zeroed::<RECT>() };
         let _ = unsafe { GetClientRect(hwnd, &mut rect) };
@@ -22,7 +25,7 @@ impl GameControl {
         let _ = unsafe { ClientToScreen(hwnd, &mut point) };
         let w = (rect.right - rect.left) as u32;
         let h = (rect.bottom - rect.top) as u32;
-        Self { hwnd, w, h }
+        Self { hwnd, post, w, h }
     }
 
     pub fn isForeground(&self) -> bool {
@@ -37,7 +40,7 @@ impl GameControl {
         }
     }
 
-    pub fn focus(&self) {
+    pub fn SetFocus(&self) {
         set_foreground_window(self.hwnd);
     }
 
@@ -63,11 +66,11 @@ impl GameControl {
         click(x, y, 0);
     }
 
-    pub fn MouseGetPos(&self) -> [i32; 2] {
+    pub fn MouseGetPos(&self) -> (i32, i32) {
         let mut point = unsafe { zeroed::<POINT>() };
         unsafe { GetCursorPos(&mut point) };
-        unsafe { ClientToScreen(self.hwnd, &mut point) };
-        [point.x, point.y]
+        unsafe { ScreenToClient(self.hwnd, &mut point) };
+        (point.x, point.y)
     }
 
     fn savePos(&self, restore: bool) {
@@ -99,12 +102,16 @@ impl GameControl {
     }
 
     pub fn Click(&self, x: i32, y: i32) {
-        let (x, y) = self.toScreenPos(x, y);
-        self.focus();
-        click(x, y, 1);
+        if (self.post) {
+            self.PostClick(x, y);
+        } else {
+            let (x, y) = self.toScreenPos(x, y);
+            self.SetFocus();
+            click(x, y, 1);
+        }
     }
 
-    // 后台点击
+    /// 后台点击
     pub fn PostClick(&self, x: i32, y: i32) {
         // let (x, y) = self.toScreenPos(x, y);
         let mut point = POINT { x, y };
@@ -122,7 +129,7 @@ impl GameControl {
         // self.Click(x, y);
     }
 
-    // 后台点击 不移动鼠标
+    /// 后台点击 不移动鼠标
     pub fn PostClickLazy(&self, x: i32, y: i32) {
         // let (x, y) = self.toScreenPos(x, y);
         let mut point = POINT { x, y };
@@ -140,9 +147,37 @@ impl GameControl {
         // self.Click(x, y);
     }
 
+    /// 基本相等的颜色
+    pub fn EqColor(&self, x: i32, y: i32, rgb: u32) -> bool {
+        hsl_sim(get_color(self.hwnd, x, y), rgb) < 10.
+    }
+
+    /// 基本相近的颜色
+    pub fn HuColor(&self, x: i32, y: i32, rgb: u32) -> bool {
+        hsl_sim(get_color(self.hwnd, x, y), rgb) < 100.
+    }
+
+    /// 相近的颜色带参数
+    pub fn HuColorM(&self, x: i32, y: i32, rgb: u32, m: f32) -> bool {
+        hsl_sim(get_color(self.hwnd, x, y), rgb) < m
+    }
+
+    /// 基本相近的颜色 (批量)
+    pub fn HuColorS(&self, x: i32, y: i32, rgb: u32) -> bool {
+        hsl_sim(get_color_batch(x, y), rgb) < 100.
+    }
+
     pub fn CheckColor(&self, x: i32, y: i32, color: &str) -> bool {
         // let (x, y) = self.toScreenPos(x, y);
         check_color_regex(self.hwnd, x, y, color)
+    }
+
+    pub fn SaveS(&self) {
+        save_dc(self.hwnd);
+    }
+
+    pub fn FreeS(&self) {
+        free_dc(self.hwnd);
     }
 
     pub fn CheckColorS(&self, x: i32, y: i32, color: &str) -> bool {
@@ -158,6 +193,54 @@ impl GameControl {
     pub fn GetColorS(&self, x: i32, y: i32) -> String {
         // let (x, y) = self.toScreenPos(x, y);
         color_to_hex(get_color_batch(x, y))
+    }
+
+    pub fn WaitEqColor(&self, x: i32, y: i32, rgb: u32, timeout: f64) -> bool {
+        // let (x, y) = self.toScreenPos(x, y);
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs_f64() < timeout {
+            if self.EqColor(x, y, rgb) {
+                return true;
+            }
+            sleep(1);
+        }
+        false
+    }
+
+    pub fn WaitEqColor2(&self, x: i32, y: i32, rgb: u32, rgb2: u32, timeout: f64) -> bool {
+        // let (x, y) = self.toScreenPos(x, y);
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs_f64() < timeout {
+            if self.EqColor(x, y, rgb) || self.EqColor(x, y, rgb2) {
+                return true;
+            }
+            sleep(1);
+        }
+        false
+    }
+
+    pub fn WaitHuColor(&self, x: i32, y: i32, rgb: u32, timeout: f64) -> bool {
+        // let (x, y) = self.toScreenPos(x, y);
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs_f64() < timeout {
+            if self.HuColor(x, y, rgb) {
+                return true;
+            }
+            sleep(1);
+        }
+        false
+    }
+
+    pub fn WaitHuColor2(&self, x: i32, y: i32, rgb: u32, rgb2: u32, timeout: f64) -> bool {
+        // let (x, y) = self.toScreenPos(x, y);
+        let start = std::time::Instant::now();
+        while start.elapsed().as_secs_f64() < timeout {
+            if self.HuColor(x, y, rgb) || self.HuColor(x, y, rgb2) {
+                return true;
+            }
+            sleep(1);
+        }
+        false
     }
 
     pub fn WaitColor(&self, x: i32, y: i32, color: &str, timeout: f64) -> bool {

@@ -47,6 +47,95 @@ pub fn str_to_pcwstr(s: &str) -> *mut u16 {
     widestring::U16CString::from_str(s).unwrap().into_raw()
 }
 
+/// bitblt截图
+#[allow(unused)]
+pub fn capture_rect_vec(hwnd: HWND, rect: (i32, i32, i32, i32)) -> Vec<u8> {
+    let (x1, y1, x2, y2) = rect;
+    let raw = unsafe {
+        let hdc = GetDC(hwnd);
+        let mem_dc = CreateCompatibleDC(hdc);
+        let rect: RECT = RECT {
+            left: x1,
+            top: y1,
+            right: x2,
+            bottom: y2,
+        };
+        let rect_size: SIZE = SIZE {
+            cx: rect.right - rect.left,
+            cy: rect.bottom - rect.top,
+        };
+
+        let h_bmp = CreateCompatibleBitmap(hdc, rect_size.cx, rect_size.cy);
+        let h_old_bmp = SelectObject(mem_dc, h_bmp);
+        let _ = BitBlt(
+            mem_dc,
+            0,
+            0,
+            rect_size.cx,
+            rect_size.cy,
+            hdc,
+            rect.left,
+            rect.top,
+            SRCCOPY,
+        );
+        let mut buffer = vec![0u8; (rect_size.cx * rect_size.cy * 4).try_into().unwrap()];
+        let ptr = buffer.as_mut_ptr().cast();
+        let result = GetDIBits(
+            mem_dc,
+            h_bmp,
+            0,
+            rect_size.cy as u32,
+            ptr as *mut _,
+            &mut BITMAPINFO {
+                bmiHeader: BITMAPINFOHEADER {
+                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                    biWidth: rect_size.cx,
+                    biHeight: rect_size.cy,
+                    biPlanes: 1,
+                    biBitCount: 32,
+                    biCompression: BI_RGB,
+                    biSizeImage: 0,
+                    biXPelsPerMeter: 0,
+                    biYPelsPerMeter: 0,
+                    biClrUsed: 0,
+                    biClrImportant: 0,
+                },
+                bmiColors: [RGBQUAD {
+                    rgbBlue: 0,
+                    rgbGreen: 0,
+                    rgbRed: 0,
+                    rgbReserved: 0,
+                }],
+            },
+            DIB_RGB_COLORS,
+        );
+        if result == 0 {
+            println!("获取位图数据失败！");
+        }
+        let _ = DeleteDC(hdc);
+        let _ = DeleteDC(mem_dc);
+        ReleaseDC(hwnd, hdc);
+        let _ = DeleteObject(h_old_bmp);
+        let _ = DeleteObject(h_bmp);
+        buffer
+    };
+    raw
+}
+#[allow(unused)]
+pub fn capture_rect(hwnd: HWND, rect: (i32, i32, i32, i32)) -> image::RgbImage {
+    let (x1, y1, x2, y2) = rect;
+    let w = (x2 - x1) as u32;
+    let h = (y2 - y1) as u32;
+    let raw = capture_rect_vec(hwnd, rect);
+    image::ImageBuffer::from_fn(w, h, move |x, y| {
+        let y = h - y - 1;
+        let b = raw[((y * w + x) * 4 + 0) as usize];
+        let g = raw[((y * w + x) * 4 + 1) as usize];
+        let r = raw[((y * w + x) * 4 + 2) as usize];
+        image::Rgb([r, g, b])
+    })
+}
+
 pub(crate) fn set_foreground_window(hwnd: HWND) -> bool {
     unsafe {
         // 显示窗口并激活
@@ -68,6 +157,12 @@ pub fn mouse_move_to(x: i32, y: i32) {
             0,
         )
     };
+}
+
+/// 鼠标移动 (相对坐标)
+#[allow(unused)]
+pub fn mouse_move(dx: i32, dy: i32) {
+    unsafe { mouse_event(MOUSEEVENTF_MOVE, dx, dy, 0, 0) };
 }
 
 pub fn mouse_down() {
@@ -542,6 +637,51 @@ pub fn check_color_regex_batch(x: i32, y: i32, pattern: &str) -> bool {
     let pixel = get_color_batch(x, y);
     check_color_raw(pixel, pattern)
 }
+pub fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
+    let r = r as f32 / 255.0;
+    let g = g as f32 / 255.0;
+    let b = b as f32 / 255.0;
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let delta = max - min;
+    let luminace = (max + min) / 2.0;
+
+    if delta == 0.0 {
+        return (0.0, 0.0, luminace);
+    }
+
+    let saturation = if luminace > 0.5 {
+        delta / (2.0 - max - min)
+    } else {
+        delta / (max + min)
+    };
+
+    let hue = if max == r {
+        let x = if g < b { 6. } else { 0. };
+        60.0 * ((g - b) / delta + x)
+    } else if max == g {
+        60.0 * ((b - r) / delta + 2.0)
+    } else {
+        60.0 * ((r - g) / delta + 4.0)
+    };
+
+    (hue, saturation, luminace)
+}
+
+/// 颜色相似度
+pub fn hsl_sim(bgr: u32, rgb: u32) -> f32 {
+    let (h1, s1, l1) = rgb_to_hsl(
+        (bgr & 0xFF) as u8,
+        (bgr >> 8 & 0xFF) as u8,
+        (bgr >> 16 & 0xFF) as u8,
+    );
+    let (h2, s2, l2) = rgb_to_hsl(
+        (rgb >> 16 & 0xFF) as u8,
+        (rgb >> 8 & 0xFF) as u8,
+        (rgb & 0xFF) as u8,
+    );
+    (h1 - h2).abs().powi(2) + ((s1 - s2) * 180.).abs().powi(2) + ((l1 - l2) * 75.).abs().powi(2)
+}
 
 pub fn color_to_hex(color: u32) -> String {
     let r = color & 0xFF;
@@ -698,7 +838,7 @@ pub struct EnumWindowsData {
     pub pid: u32,
 }
 
-pub(crate) fn get_window_by_process(pid: u32) -> Option<HWND> {
+pub fn get_window_by_process(pid: u32) -> Option<HWND> {
     unsafe {
         let mut wi = std::mem::zeroed::<EnumWindowsData>();
         wi.pid = pid;
@@ -712,7 +852,7 @@ pub(crate) fn get_window_by_process(pid: u32) -> Option<HWND> {
         }
     }
 }
-pub(crate) fn get_window_rect(hwnd: HWND) -> Option<RECT> {
+pub fn get_window_rect(hwnd: HWND) -> Option<RECT> {
     unsafe {
         let mut rect = std::mem::zeroed::<RECT>();
         if GetWindowRect(hwnd, &mut rect) == 1 {

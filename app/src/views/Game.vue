@@ -6,6 +6,7 @@ import { CollapsibleContent, CollapsibleRoot, CollapsibleTrigger } from "radix-v
 import gsap from "gsap"
 import { FunctionDirective, ref, watchEffect, nextTick, onMounted } from "vue"
 import { env } from "../env"
+import { openSChat } from "../mod/api/swindow"
 
 const game = useGameStore()
 const { t } = useTranslation()
@@ -195,33 +196,52 @@ function copyUID(uid?: string) {
             </CollapsibleContent>
         </CollapsibleRoot>
         <div>
-            <div class="form-control flex flex-row justify-between items-center flex-wrap">
-                <label class="label cursor-pointer space-x-2 min-w-32 justify-start">
+            <div class="form-control flex flex-row justify-between items-center flex-wrap w-full">
+                <label class="label cursor-pointer gap-2 min-w-32 justify-start">
                     <input type="checkbox" v-model="game.autoLoginEnable" class="checkbox checkbox-primary" />
                     <span class="label-text">{{ $t("game.autoLogin") }}</span>
                 </label>
-                <div v-if="game.autoLoginEnable" class="flex flex-1 items-center space-x-2">
-                    <span class="text-sm">{{ $t("game.autoSend") }}</span>
+                <div v-if="game.autoLoginEnable" class="flex-1 flex items-center gap-2 flex-wrap justify-between">
                     <Select v-model="game.autoLoginRoom">
                         <SelectItem value="-">{{ $t("game.autoLoginRoom") }}</SelectItem>
                         <GQQuery query="query { rooms { id, name } }" :variables="{}" v-slot="{ data }">
                             <SelectItem v-if="data" v-for="item in data.rooms" :key="item.id" :value="item.id">{{ item.name }}</SelectItem>
                         </GQQuery>
                     </Select>
-                    <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
-                        <input type="checkbox" v-model="game.autoLoginTryNext" class="checkbox checkbox-primary" />
-                        <span class="label-text">{{ $t("game.autoNext") }}</span>
-                    </label>
-                    <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
-                        <input type="checkbox" v-model="game.autoLoginOnlyEnd" class="checkbox checkbox-primary" />
-                        <span class="label-text">{{ $t("game.onlyEnd") }}</span>
-                    </label>
-                    <div class="flex-1"></div>
-                    <Tooltip side="left" :tooltip="$t('game.send')">
-                        <span class="btn btn-sm btn-primary" :class="{ 'btn-disabled': game.autoLoginRoom === '-' }" @click="game.sendUID">
-                            {{ $t("chat.send") }} <Icon icon="la:paper-plane" class="text-xl" />
-                        </span>
+                    <Tooltip side="left" :tooltip="$t('game.autoNextTip')">
+                        <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                            <input type="checkbox" v-model="game.autoLoginTryNext" class="checkbox checkbox-primary" />
+                            <span class="label-text">{{ $t("game.autoNext") }}</span>
+                        </label>
                     </Tooltip>
+                    <Tooltip side="left" :tooltip="$t('game.onlyEndTip')">
+                        <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                            <input type="checkbox" v-model="game.autoLoginOnlyEnd" class="checkbox checkbox-primary" />
+                            <span class="label-text">{{ $t("game.onlyEnd") }}</span>
+                        </label>
+                    </Tooltip>
+                    <div class="flex-1"></div>
+                    <div class="flex-none flex gap-2 justify-end max-[720px]:w-full">
+                        <Tooltip side="left" :tooltip="$t('game.openschatTip')">
+                            <button
+                                aria-label="$t('game.openschat')"
+                                class="btn btn-sm btn-primary"
+                                :class="{ 'btn-disabled': game.autoLoginRoom === '-' }"
+                                @click="openSChat(game.autoLoginRoom)"
+                            >
+                                <Icon icon="radix-icons:open-in-new-window" />
+                            </button>
+                        </Tooltip>
+                        <Tooltip side="left" :tooltip="$t('game.send')">
+                            <button
+                                class="btn btn-sm btn-primary"
+                                :class="{ 'btn-disabled': game.autoLoginRoom === '-' }"
+                                @click="game.sendUID"
+                            >
+                                {{ $t("chat.send") }} <Icon icon="la:paper-plane" class="text-xl" />
+                            </button>
+                        </Tooltip>
+                    </div>
                 </div>
             </div>
         </div>

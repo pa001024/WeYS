@@ -1,5 +1,7 @@
 <script lang="ts" setup>
+import { watch } from "vue"
 import Select, { SelectGroup, SelectLabel, SelectSeparator, SelectItem } from "../components/select"
+import { MATERIALS } from "../mod/api/app"
 import { useSettingStore } from "../mod/state/setting"
 
 const setting = useSettingStore()
@@ -39,6 +41,11 @@ const darkThemes = [
     "coffee",
     //
 ]
+
+watch(
+    () => setting.winMaterial,
+    (v) => setting.setWinMaterial(v)
+)
 
 // 首字母大写
 function capitalize(str: string) {
@@ -87,6 +94,19 @@ function capitalize(str: string) {
                     </div>
                     <div class="form-control">
                         <div class="label">
+                            <span class="label-text">
+                                {{ $t("setting.winMaterial") }}
+                            </span>
+
+                            <Select v-model="setting.winMaterial" :placeholder="$t('setting.winMaterial')">
+                                <SelectItem v-for="th in MATERIALS" :key="th" :value="th">
+                                    {{ th }}
+                                </SelectItem>
+                            </Select>
+                        </div>
+                    </div>
+                    <div class="form-control">
+                        <div class="label">
                             <span class="label-text">{{ $t("setting.uiScale") }}</span>
                             <div class="min-w-56">
                                 <input
@@ -99,9 +119,12 @@ function capitalize(str: string) {
                                     step="0.1"
                                 />
                                 <div class="w-full flex justify-between text-xs px-1">
-                                    <span :class="{ 'text-secondary': setting.uiScale.toFixed(1) === (0.7 + i / 10).toFixed(1) }" v-for="i in 8" :key="i">{{
-                                        (0.7 + i / 10).toFixed(1)
-                                    }}</span>
+                                    <span
+                                        :class="{ 'text-secondary': setting.uiScale.toFixed(1) === (0.7 + i / 10).toFixed(1) }"
+                                        v-for="i in 8"
+                                        :key="i"
+                                        >{{ (0.7 + i / 10).toFixed(1) }}</span
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -126,7 +149,9 @@ function capitalize(str: string) {
                             <div class="min-w-56">
                                 <input
                                     :value="setting.minCountInterval"
-                                    @input="setting.minCountInterval = Math.max(35, Math.min(60, +($event.target as HTMLInputElement)!.value))"
+                                    @input="
+                                        setting.minCountInterval = Math.max(35, Math.min(60, +($event.target as HTMLInputElement)!.value))
+                                    "
                                     type="range"
                                     class="range range-secondary"
                                     min="35"

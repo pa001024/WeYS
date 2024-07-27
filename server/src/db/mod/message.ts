@@ -4,6 +4,7 @@ import { Context } from "../yoga"
 import { db, schema } from ".."
 import { getSubSelection } from "."
 import { sanitizeHTML } from "../../util/html"
+import { hasUser } from "../kv/room"
 
 export const typeDefs = /* GraphQL */ `
     type Query {
@@ -58,18 +59,20 @@ export const typeDefs = /* GraphQL */ `
 
 export const resolvers = {
     Query: {
-        msgCount: async (parent, { roomId }, context, info) => {
-            if (!context.user) return 0
+        msgCount: async (parent, { roomId }, { user }, info) => {
+            if (!user) throw new Error("need login")
+            if (!hasUser(roomId, user.id)) throw new Error("need room join")
 
             const rst = await db.select({ value: count() }).from(schema.msgs).where(eq(schema.msgs.roomId, roomId))
             return rst[0].value
         },
         msgs: async (parent, { roomId, limit, offset }, context, info) => {
-            if (!context.user) return []
+            if (!context.user) throw new Error("need login")
+            if (!hasUser(roomId, context.user.id)) throw new Error("need room join")
 
             const user = getSubSelection(info, "user")
             const reactions = getSubSelection(info, "reactions")
-            const last = await db.query.msgs.findMany({
+            const msgs = await db.query.msgs.findMany({
                 with: {
                     user: user && true,
                     reactions: reactions && true,
@@ -77,12 +80,12 @@ export const resolvers = {
                 where: eq(schema.msgs.roomId, roomId),
                 limit,
                 offset,
-                // orderBy: (t, { desc, sql }) => desc(sql`rowid`),
             })
-            return last //.reverse()
+            return msgs
         },
         lastMsgs: async (parent, { roomId, limit, offset }, context, info) => {
-            if (!context.user) return []
+            if (!context.user) throw new Error("need login")
+            if (!hasUser(roomId, context.user.id)) throw new Error("need room join")
 
             const user = getSubSelection(info, "user")
             const reactions = getSubSelection(info, "reactions")
@@ -101,7 +104,7 @@ export const resolvers = {
     },
     Mutation: {
         sendMessage: async (parent, { roomId, content }, { user, pubsub }) => {
-            if (!user) return null
+            if (!user) throw new Error("need login")
             // TODO: check if user is in the room
             const userId = user.id
             const rst = (
