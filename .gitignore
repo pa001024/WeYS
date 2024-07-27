@@ -19,3 +19,4 @@ app/src/env.ts
 bun.lockb
 app/.env
 *.sh
+.tauri/

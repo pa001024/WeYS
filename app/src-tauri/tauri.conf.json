@@ -22,7 +22,7 @@
     "plugins": {
         "updater": {
             "createUpdaterArtifacts": true,
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxRjA3MjY5QTU2OTI2OEQKUldTTkptbWxhWEx3c1hpZ3hVQlVjVVlIN3QzVEQxblliVHE1aHNXNU1SOXB6TnljMXJJTEpOYm0K",
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFFRUQ5RjIzRDk3NThFMjAKUldRZ2puWFpJNS90SG5QK3ZJT2Rrbm55ZjdPTnVCWDBTU3dHRktXTGNwNzUzckZRaGF6SG1kdFEK",
             "endpoints": [
                 "https://gitee.com/pa001024/WeYS/releases/latest/download/latest.json"
             ],
