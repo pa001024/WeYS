@@ -350,6 +350,15 @@ onMounted(async () => {
                                                     :placeholder="$t('setting.password')"
                                                 />
                                             </label>
+                                            <LocalQQ
+                                                @select="
+                                                    (qq) => {
+                                                        registerForm.email = `${qq.uin}@qq.com`
+                                                        registerForm.qq = String(qq.uin)
+                                                        registerForm.name = qq.nickname
+                                                    }
+                                                "
+                                            />
                                         </div>
                                     </template>
                                 </Dialog>
@@ -368,7 +377,7 @@ onMounted(async () => {
                                     {{ $t("setting.logout") }}
                                 </div>
                             </div>
-                            <div class="grow flex justify-between gap-2 min-w-56" v-else>
+                            <div class="flex justify-between gap-2 min-w-56" v-else>
                                 <Dialog
                                     class="btn btn-sm grow"
                                     :title="$t('login.guestLogin')"
@@ -394,6 +403,14 @@ onMounted(async () => {
                                                 <Icon icon="fa6:qq" class="w-4 h-4 opacity-70" />
                                                 <input v-model="guestForm.qq" type="text" class="grow" :placeholder="$t('user.qq')" />
                                             </label>
+                                            <LocalQQ
+                                                @select="
+                                                    (qq) => {
+                                                        guestForm.qq = String(qq.uin)
+                                                        guestForm.name = qq.nickname
+                                                    }
+                                                "
+                                            />
                                         </div>
                                     </template>
                                 </Dialog>

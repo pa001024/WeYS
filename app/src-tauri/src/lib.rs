@@ -20,6 +20,44 @@ async fn app_close(app_handle: tauri::AppHandle) {
         return app_handle.exit(0);
     }
 }
+
+#[tauri::command]
+async fn get_local_qq(port: u32) -> String {
+    let client = reqwest::Client::builder()
+        .cookie_store(true)
+        .build()
+        .unwrap();
+    if let Ok(res) = {
+        client.get("https://xui.ptlogin2.qq.com/cgi-bin/xlogin?s_url=https%3A%2F%2Fgraph.qq.com%2Foauth2.0%2Flogin_jump").send().await
+    } {
+        let val = res
+            .cookies()
+            .into_iter()
+            .find(|x| x.name() == "pt_local_token")
+            .unwrap()
+            .value()
+            .to_string();
+
+        if let Ok(res) = {
+            let url = format!("https://localhost.ptlogin2.qq.com:{}/pt_get_uins?callback=ptui_getuins_CB&pt_local_tk={}", port, val);
+            client
+                .get(url)
+                .header("Referer", "https://xui.ptlogin2.qq.com/")
+                .send()
+                .await
+        } {
+            let text = res.text().await.unwrap();
+            if text.len() > 57 {
+                let s = text.as_str();
+                let s = &s[21..text.len() - 35];
+                return s.to_string();
+            }
+        }
+    }
+
+    return "[]".to_string();
+}
+
 #[tauri::command]
 fn apply_material(window: tauri::WebviewWindow, material: &str) -> String {
     {
@@ -71,12 +109,24 @@ fn apply_material(window: tauri::WebviewWindow, material: &str) -> String {
     "Success".to_string()
 }
 
+#[tauri::command]
+fn get_os_version() -> String {
+    use sysinfo::System;
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    if let Some(version) = sysinfo::System::os_version() {
+        version
+    } else {
+        "".to_string()
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // tauri::async_runtime::set(tokio::runtime::Handle::current());
     tauri::Builder::default()
         // .plugin(tauri_plugin_updater::Builder::new().build())
-        // .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_http::init())
         // .plugin(tauri_plugin_notification::init())
         // .plugin(tauri_plugin_os::init())
         // .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -226,7 +276,12 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![app_close, apply_material])
+        .invoke_handler(tauri::generate_handler![
+            app_close,
+            apply_material,
+            get_os_version,
+            get_local_qq
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

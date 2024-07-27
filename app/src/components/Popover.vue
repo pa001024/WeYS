@@ -3,12 +3,14 @@ defineProps<{
     title?: string
     side?: "top" | "right" | "bottom" | "left"
     sideOffset?: number
+    noconfirm?: boolean
 }>()
 const emit = defineEmits(["close", "confirm"])
+const model = defineModel<boolean>()
 </script>
 
 <template>
-    <PopoverRoot>
+    <PopoverRoot v-model:open="model">
         <PopoverTrigger v-bind="$attrs" :aria-label="title">
             <slot></slot>
         </PopoverTrigger>
@@ -25,7 +27,7 @@ const emit = defineEmits(["close", "confirm"])
                         <p class="text-base-content/70 text-sm font-semibold m-2">{{ title }}</p>
 
                         <div class="controls">
-                            <PopoverClose class="btn btn-ghost btn-square btn-sm" aria-label="Close" @click="emit('confirm')">
+                            <PopoverClose class="btn btn-ghost btn-square btn-sm" v-if="!noconfirm" aria-label="Close" @click="emit('confirm')">
                                 <Icon icon="radix-icons:check" />
                             </PopoverClose>
                             <PopoverClose class="btn btn-ghost btn-square btn-sm" aria-label="Close" @click="emit('close')">

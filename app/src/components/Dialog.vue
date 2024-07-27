@@ -28,8 +28,8 @@ watch(model, (value) => {
             >
                 <form class="p-6" @submit.prevent="$emit('submit')">
                     <div class="flex flex-col p-6 gap-2.5">
-                        <DialogTitle class="text-lg text-base-content font-semibold">{{ title }}</DialogTitle>
-                        <DialogDescription class="text-base-content/60 text-sm">{{ description }}</DialogDescription>
+                        <DialogTitle v-if="title" class="text-lg text-base-content font-semibold">{{ title }}</DialogTitle>
+                        <DialogDescription v-if="description" class="text-base-content/60 text-sm">{{ description }}</DialogDescription>
                     </div>
 
                     <div class="space-y-4 p-6">
