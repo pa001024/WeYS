@@ -5,19 +5,19 @@ import mitt from "mitt"
 import { useUserStore } from "../state/user"
 
 export function useRTC(roomId: MaybeRef<string>) {
-    const loaded = ref(false)
-    let client = new RTCClient(typeof roomId === "string" ? roomId : roomId.value, loaded)
+    const state = ref("loading")
+    let client = new RTCClient(typeof roomId === "string" ? roomId : roomId.value, state)
     const voiceOn = ref(true)
     const micOn = ref(false)
     watch(micOn, (newVal) => client.setMicOn(newVal))
     if (typeof roomId !== "string") {
         watch(roomId, (newVal) => {
             if (client) client.dispose()
-            client = new RTCClient(newVal, loaded)
+            client = new RTCClient(newVal, state)
         })
     }
 
-    return { loaded, voiceOn, micOn, client }
+    return { state, voiceOn, micOn, client }
 }
 
 export class RTCClient {
@@ -30,8 +30,8 @@ export class RTCClient {
         candidate: RTCIceCandidateInit
     }>()
     localStream: MediaStream | null = null
-    constructor(public roomId: string, public loaded: Ref<boolean>) {
-        loaded.value = false
+    constructor(public roomId: string, public state: Ref<string>) {
+        state.value = "loading"
         useSubscription<{
             newRoomUser: {
                 id: string
@@ -144,8 +144,9 @@ export class RTCClient {
                     conn.offer()
                 }
             }
-            this.loaded.value = true
+            this.state.value = "loaded"
         } else {
+            this.state.value = "failed"
             throw new Error("join failed")
         }
     }

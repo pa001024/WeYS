@@ -53,6 +53,7 @@ export const resolvers = {
     Mutation: {
         rtcJoin: async (parent, { roomId }, { user, pubsub }, info) => {
             if (!user) return null
+            if (!hasUser(roomId, user.id)) return null
             return {
                 id: hasUser(roomId, user.id),
                 end: false,

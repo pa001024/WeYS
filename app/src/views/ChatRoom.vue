@@ -1,18 +1,18 @@
 <script lang="ts" setup>
-import { until, useTimestamp } from "@vueuse/core"
+import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from "vue"
+import { useRoute } from "vue-router"
+import { useTimestamp } from "@vueuse/core"
 import { useScroll } from "@vueuse/core"
 import { useSound } from "@vueuse/sound"
-import { computed, onMounted, onUnmounted, reactive, ref, watch, watchEffect } from "vue"
-import { isImage, sanitizeHTML } from "../mod/util/html"
-import { gql, useQuery, useSubscription } from "@urql/vue"
-import { useRoute } from "vue-router"
-import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation, sendMessageMutation } from "../mod/api/mutation"
-import { useUserStore } from "../mod/state/user"
-import { env } from "../env"
-import { copyContent, copyText, pasteText } from "../mod/util/copy"
-import { useRTC } from "../mod/api/rtc"
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut"
+import { env } from "../env"
+import { gql, useQuery, useSubscription } from "@urql/vue"
+import { isImage, sanitizeHTML } from "../mod/util/html"
+import { copyContent, copyText, pasteText } from "../mod/util/copy"
+import { addTaskMutation, editMessageMutation, endTaskMutation, joinTaskMutation, sendMessageMutation } from "../mod/api/mutation"
 import { useUIStore } from "../mod/state/ui"
+import { useUserStore } from "../mod/state/user"
+import { useRTC } from "../mod/api/rtc"
 
 const route = useRoute()
 const roomId = computed(() => route.params.room as string)
@@ -89,7 +89,7 @@ watchEffect(() => {
     if (title.value) ui.schatTitle = maxUsers.value ? `${title.value} (${maxUsers.value})` : `${title.value}`
 })
 
-const { micOn, loaded } = useRTC(roomId)
+const { micOn, state } = useRTC(roomId)
 onMounted(async () => {
     if (msgCount.value > 0) user.setRoomReadedCount(roomId.value, msgCount.value)
 })
@@ -403,7 +403,7 @@ async function autoJoinGame(task: Task) {
 <template>
     <div class="w-full h-full bg-base-200/50 flex">
         <!-- 聊天窗口 -->
-        <div v-if="isJoined && loaded" class="flex-1 flex flex-col overflow-hidden">
+        <div v-if="isJoined && state === 'loaded'" class="flex-1 flex flex-col overflow-hidden">
             <!-- 主内容区 -->
             <div class="flex-1 flex flex-col overflow-hidden relative">
                 <div class="flex flex-col gap-2 absolute left-0 right-0 justify-center z-10 p-4">
@@ -764,7 +764,7 @@ async function autoJoinGame(task: Task) {
                 </div>
             </form>
         </div>
-        <div v-else-if="loaded" class="flex-1 flex flex-col gap-2 items-center justify-center">
+        <div v-else-if="state === 'failed'" class="flex-1 flex flex-col gap-2 items-center justify-center">
             <div class="text-bold">{{ $t("chat.joinFailed") }}</div>
             <div class="text-sm text-base-content/50">{{ $t("chat.joinFailedTip") }}</div>
         </div>

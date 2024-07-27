@@ -1,10 +1,10 @@
 <script lang="ts" setup>
 import { computed, onBeforeMount, ref } from "vue"
-import { htmlToText } from "../mod/util/html"
 import { useRoute, useRouter } from "vue-router"
+import { t } from "i18next"
+import { htmlToText } from "../mod/util/html"
 import { createRoomMutation, deleteRoomMutation } from "../mod/api/mutation"
 import { useUserStore } from "../mod/state/user"
-import { t } from "i18next"
 
 const user = useUserStore()
 const router = useRouter()
@@ -55,7 +55,11 @@ interface Room {
 }
 
 async function createRoom() {
-    const result = await createRoomMutation({ name: newroom.value.trim(), type: newroomType.value })
+    const result = await createRoomMutation({
+        name: newroom.value.trim(),
+        type: newroomType.value,
+        maxUsers: +newroomMaxUser.value || void 0,
+    })
     if (result) {
         newroom.value = ""
         await reloadRooms()

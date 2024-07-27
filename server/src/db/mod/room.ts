@@ -247,14 +247,14 @@ export const resolvers = {
             const socket = extra?.socket
             const room = await db.query.rooms.findFirst({ where: eq(schema.rooms.id, roomId) })
             if (!room) throw new Error("room not found")
-            if (hasUser(room.id, user.id) || (room.maxUsers && room.maxUsers > getUsers(room.id).length)) throw new Error("room full")
+            if (room.ownerId !== user.id && !hasUser(room.id, user.id) && room.maxUsers && room.maxUsers <= getUsers(room.id).length) throw new Error("room full")
             if (socket) {
                 const id = socket.data.id
                 if (!hasUser(roomId, user.id)) {
                     const oldRoom = getClientRoom(id)
                     if (oldRoom) {
-                        const oldRtc = removeClient(id, oldRoom, user)
-                        pubsub.publish("newRoomUser", oldRoom, { newRoomUser: oldRtc })
+                        const newRoomUser = removeClient(id, oldRoom, user)
+                        pubsub.publish("newRoomUser", oldRoom, { newRoomUser })
                     }
                     const newRoomUser = addClient(id, roomId, user)
                     pubsub.publish("newRoomUser", roomId, { newRoomUser })

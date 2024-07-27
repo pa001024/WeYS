@@ -19,8 +19,8 @@ function namedMutation<R = { id: string }, G extends string = string>(gqlQuery: 
 }
 
 export const createRoomMutation = namedMutation(/* GraphQL */ `
-    mutation ($name: String!, $type: String!) {
-        createRoom(data: { name: $name, type: $type }) {
+    mutation ($name: String!, $type: String!, $maxUsers: Int) {
+        createRoom(data: { name: $name, type: $type, maxUsers: $maxUsers }) {
             id
         }
     }
