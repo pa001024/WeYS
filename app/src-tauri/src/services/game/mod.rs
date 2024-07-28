@@ -28,12 +28,13 @@ async fn auto_open(state: i32, post: bool) -> bool {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
         let interval = Duration::from_millis(100);
         let ctl = GameControl::new(hwnd, post);
+        ctl.SavePos();
         if !post {
             ctl.SetFocus();
         }
-        if !ctl.EqColor(450, 835, 0xECE5D8) {
+        if !ctl.HuColor(526, 838, 0xECE5D8) {
             ctl.Click(382, 52); // F2
-            ctl.WaitEqColor(450, 835, 0xECE5D8, 2.);
+            ctl.WaitHuColor(526, 838, 0xECE5D8, 2.);
         }
         ctl.Click(469, 840); // 世界权限
         tokio::time::sleep(interval).await;
@@ -43,6 +44,7 @@ async fn auto_open(state: i32, post: bool) -> bool {
             3 => ctl.Click(457, 686), // 无法加入
             _ => {}
         }
+        ctl.RestorePos();
 
         true
     } else {
@@ -392,7 +394,7 @@ async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool, p
         {
             println!("成功加载");
             ctl.Click(385, 58); // 点击F2
-            if ctl.WaitEqColor(469, 840, 0xECE5D8, 2.) {
+            if ctl.WaitHuColor(526, 838, 0xECE5D8, 2.) {
                 println!("设置权限");
                 ctl.Click(469, 840); // 世界权限
                 ctl.Sleep(100);

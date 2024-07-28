@@ -149,7 +149,7 @@ impl GameControl {
 
     /// 基本相等的颜色
     pub fn EqColor(&self, x: i32, y: i32, rgb: u32) -> bool {
-        hsl_sim(get_color(self.hwnd, x, y), rgb) < 10.
+        get_color(self.hwnd, x, y) == rgb
     }
 
     /// 基本相近的颜色
