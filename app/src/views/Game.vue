@@ -208,21 +208,27 @@ function copyUID(uid?: string) {
                             <SelectItem v-if="data" v-for="item in data.rooms" :key="item.id" :value="item.id">{{ item.name }}</SelectItem>
                         </GQQuery>
                     </Select>
-                    <Tooltip side="left" :tooltip="$t('game.autoNextTip')">
+                    <Tooltip side="bottom" :tooltip="$t('game.autoNextTip')">
                         <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
                             <input type="checkbox" v-model="game.autoLoginTryNext" class="checkbox checkbox-primary" />
                             <span class="label-text">{{ $t("game.autoNext") }}</span>
                         </label>
                     </Tooltip>
-                    <Tooltip side="left" :tooltip="$t('game.onlyEndTip')">
+                    <Tooltip side="bottom" :tooltip="$t('game.onlyEndTip')">
                         <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
                             <input type="checkbox" v-model="game.autoLoginOnlyEnd" class="checkbox checkbox-primary" />
                             <span class="label-text">{{ $t("game.onlyEnd") }}</span>
                         </label>
                     </Tooltip>
+                    <Tooltip side="bottom" :tooltip="$t('game.postTip')">
+                        <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                            <input type="checkbox" v-model="game.autoLoginPost" class="checkbox checkbox-primary" />
+                            <span class="label-text">{{ $t("game.post") }}</span>
+                        </label>
+                    </Tooltip>
                     <div class="flex-1"></div>
                     <div class="flex-none flex gap-2 justify-end max-[720px]:w-full">
-                        <Tooltip side="left" :tooltip="$t('game.openschatTip')">
+                        <Tooltip side="bottom" :tooltip="$t('game.openschatTip')">
                             <button
                                 aria-label="$t('game.openschat')"
                                 class="btn btn-sm btn-primary"
@@ -232,7 +238,7 @@ function copyUID(uid?: string) {
                                 <Icon icon="radix-icons:open-in-new-window" />
                             </button>
                         </Tooltip>
-                        <Tooltip side="left" :tooltip="$t('game.send')">
+                        <Tooltip side="bottom" :tooltip="$t('game.send')">
                             <button
                                 class="btn btn-sm btn-primary"
                                 :class="{ 'btn-disabled': game.autoLoginRoom === '-' }"

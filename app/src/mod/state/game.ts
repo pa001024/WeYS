@@ -80,7 +80,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
                 const acc = await game.getCurrent()
                 if (acc) {
                     game.state = "开始自动登录"
-                    await autoLogin(game.launchId, acc.login, acc.pwd)
+                    await autoLogin(game.launchId, acc.login, acc.pwd, game.autoLoginPost)
                 }
             } else {
                 game.state = "启动失败"
@@ -107,7 +107,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
                 const acc = await game.getCurrent()
                 if (acc) {
                     game.state = "开始设置世界权限"
-                    await autoSetup(game.launchId, game.autoLoginRoom !== "-")
+                    await autoSetup(game.launchId, game.autoLoginRoom !== "-", game.autoLoginPost)
                 }
             } else {
                 game.state = "检测失败 请手动点击加号"
@@ -163,17 +163,17 @@ if (env.isApp && getCurrentWindow().label === "main") {
                             console.debug("opendoor subscribe", e)
                             if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
-                                await autoOpen()
+                                await autoOpen(1, game.autoLoginPost)
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
                             } else if (game.autoLoginOnlyEnd) {
                                 if (ev.paused === true) {
                                     game.state = "房间控制关门"
-                                    await autoOpen(3)
+                                    await autoOpen(3, game.autoLoginPost)
                                 } else if (ev.paused === false) {
                                     game.state = "房间控制开门"
-                                    await autoOpen(1)
+                                    await autoOpen(1, game.autoLoginPost)
                                 }
                             }
                         })
@@ -195,6 +195,7 @@ export const useGameStore = defineStore("game", {
             autoLoginEnable: useLocalStorage("game_auto_login_enable", false),
             autoLoginTryNext: useLocalStorage("game_auto_login_try_next", true),
             autoLoginOnlyEnd: useLocalStorage("game_auto_login_only_end", false),
+            autoLoginPost: useLocalStorage("game_auto_login_post", false),
             autoLoginRoom: useLocalStorage("game_auto_login_room", "-"),
             nextSho: useLocalStorage("game_auto_login_room", "-"),
             path: useLocalStorage("game_path", ""),

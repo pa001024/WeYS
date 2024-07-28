@@ -242,9 +242,15 @@ fn unlockfps(pid: isize) -> bool {
 }
 
 #[tauri::command]
-async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pwd: String) {
+async fn auto_login<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    login: String,
+    pwd: String,
+    post: bool,
+) {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
-        let ctl = GameControl::new(hwnd, false);
+        let ctl = GameControl::new(hwnd, post);
         // 适龄提示
         println!("自动登录");
         if !ctl.WaitEqColor2(1489, 794, 0x222222, 0x111111, 30.) {
@@ -261,6 +267,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
         println!("登录开始");
         // 判断登陆框
         if !ctl.EqColor(1489, 794, 0x222222) {
+            let ctl = GameControl::new(hwnd, false);
             println!("需输入密码");
             let _ = app.emit(
                 "game_input",
@@ -270,19 +277,19 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
                 },
             );
             ctl.SetFocus();
-            ctl.Sleep(100);
+            sleep(100);
             ctl.WaitEqColor(626, 274, 0xFFFFFF, 5.); // 登陆框
             ctl.Click(971, 348);
-            ctl.Sleep(100);
+            sleep(100);
             ctl.SendText(login.as_str());
-            ctl.Sleep(300);
+            sleep(300);
             ctl.Click(994, 420);
-            ctl.Sleep(100);
+            sleep(100);
             ctl.SendText(pwd.as_str());
-            ctl.Sleep(300);
+            sleep(300);
             if !ctl.EqColor(580, 505, 0xDEBC60) {
                 ctl.Click(581, 514);
-                ctl.Sleep(100);
+                sleep(100);
             }
             ctl.Click(973, 580);
             sleep(200);

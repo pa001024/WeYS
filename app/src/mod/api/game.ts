@@ -28,8 +28,8 @@ export async function autoJoin(uid: string) {
 export async function autoOpen(state = 1, post = false) {
     return (await invoke("plugin:game|auto_open", { state, post })) as boolean
 }
-export async function autoLogin(id: string, login = "", pwd = "") {
-    return (await invoke("plugin:game|auto_login", { id, login, pwd })) as boolean
+export async function autoLogin(id: string, login = "", pwd = "", post = false) {
+    return (await invoke("plugin:game|auto_login", { id, login, pwd, post })) as boolean
 }
 export async function autoSetup(id: string, autosend = false, post = false) {
     return (await invoke("plugin:game|auto_setup", { id, autosend, post })) as boolean

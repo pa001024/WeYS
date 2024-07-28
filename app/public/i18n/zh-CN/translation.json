@@ -45,9 +45,11 @@
     "autoNext": "失败跳过",
     "onlyEnd": "仅结束",
     "autoNextTip": "登录超时后自动切下一个账号",
-    "onlyEndTip": "房间点击结束后才会切号",
+    "onlyEndTip": "房间点击结束或人加满后才会切号",
     "openschat": "打开",
-    "openschatTip": "打开独立聊天窗口"
+    "openschatTip": "打开独立聊天窗口",
+    "post": "后台",
+    "postTip": "尽可能使用后台API控制 除登录外不用将窗口切到前台"
   },
   "chat": {
     "title": "聊天",
