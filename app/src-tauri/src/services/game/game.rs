@@ -120,9 +120,8 @@ impl GameControl {
             self.MouseMove(x, y);
             PostMessageA(self.hwnd, WM_MOUSEMOVE, 0, &mut point as *mut _ as isize);
             PostMessageA(self.hwnd, WM_LBUTTONDOWN, 1, &mut point as *mut _ as isize);
-            self.Sleep(20);
             PostMessageA(self.hwnd, WM_LBUTTONUP, 1, &mut point as *mut _ as isize);
-            self.Sleep(20);
+            self.Sleep(50);
             self.RestorePos();
         }
         // self.SavePos();

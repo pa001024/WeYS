@@ -26,25 +26,24 @@ struct LoginPayload {
 #[tauri::command]
 async fn auto_open(state: i32, post: bool) -> bool {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
-        let interval = Duration::from_millis(100);
         let ctl = GameControl::new(hwnd, post);
-        ctl.SavePos();
         if !post {
             ctl.SetFocus();
         }
         if !ctl.HuColor(526, 838, 0xECE5D8) {
             ctl.Click(382, 52); // F2
             ctl.WaitHuColor(526, 838, 0xECE5D8, 2.);
+            sleep(100);
         }
         ctl.Click(469, 840); // 世界权限
-        tokio::time::sleep(interval).await;
+        sleep(100);
         match state {
             1 => ctl.Click(485, 735), // 直接加入
             2 => ctl.Click(473, 785), // 确认后可加入
             3 => ctl.Click(457, 686), // 无法加入
             _ => {}
         }
-        ctl.RestorePos();
+        sleep(100);
 
         true
     } else {
@@ -397,14 +396,13 @@ async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool, p
             if ctl.WaitHuColor(526, 838, 0xECE5D8, 2.) {
                 println!("设置权限");
                 ctl.Click(469, 840); // 世界权限
-                ctl.Sleep(100);
+                sleep(100);
                 if autosend {
                     ctl.Click(457, 686); // 无法加入
                 } else {
                     ctl.Click(485, 735); // 直接加入
                 }
-                ctl.Sleep(100);
-                ctl.Click(469, 840); // 世界权限
+                sleep(100);
                 println!("登录结束");
 
                 return;
