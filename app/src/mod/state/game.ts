@@ -67,6 +67,11 @@ if (env.isApp && getCurrentWindow().label === "main") {
 
         // await setHotkey("R")
 
+        await event.listen<{ id: string; success: boolean }>("game_init", async (e) => {
+            if (e.payload.id !== game.launchId) return
+            console.log("game init")
+            game.state = "游戏启动成功"
+        })
         await event.listen<{ id: string; success: boolean }>("game_start", async (e) => {
             if (e.payload.id !== game.launchId) return
             if (e.payload.success) {
@@ -80,11 +85,6 @@ if (env.isApp && getCurrentWindow().label === "main") {
             } else {
                 game.state = "启动失败"
             }
-        })
-        await event.listen<{ id: string; success: boolean }>("game_init", async (e) => {
-            if (e.payload.id !== game.launchId) return
-            console.log("game init")
-            game.state = "游戏启动成功"
         })
         await event.listen<{ id: string; success: boolean }>("game_input", async (e) => {
             if (e.payload.id !== game.launchId) return

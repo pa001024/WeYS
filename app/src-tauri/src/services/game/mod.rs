@@ -247,7 +247,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
         let ctl = GameControl::new(hwnd, false);
         // 适龄提示
         println!("自动登录");
-        if !ctl.WaitEqColor2(1510, 70, 0x148BCE, 0x0A4566, 30.) {
+        if !ctl.WaitEqColor2(1489, 794, 0x222222, 0x111111, 30.) {
             println!("登录超时");
             let _ = app.emit(
                 "game_login",
@@ -260,7 +260,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
         }
         println!("登录开始");
         // 判断登陆框
-        if !ctl.EqColor(1510, 70, 0x148BCE) {
+        if !ctl.EqColor(1489, 794, 0x222222) {
             println!("需输入密码");
             let _ = app.emit(
                 "game_input",
@@ -291,7 +291,7 @@ async fn auto_login<R: Runtime>(app: AppHandle<R>, id: String, login: String, pw
         let timeout = Duration::from_secs(30);
         while now.elapsed() < timeout {
             // 循环判断登录成功
-            if ctl.WaitEqColor(1510, 70, 0x148BCE, 1.) {
+            if ctl.WaitEqColor(1489, 794, 0x222222, 1.) {
                 break;
             }
             // 登陆框灰色 说明有滑块

@@ -154,7 +154,7 @@ impl GameControl {
 
     /// 基本相近的颜色
     pub fn HuColor(&self, x: i32, y: i32, rgb: u32) -> bool {
-        hsl_sim(get_color(self.hwnd, x, y), rgb) < 100.
+        hsl_sim(get_color(self.hwnd, x, y), rgb) < 200.
     }
 
     /// 相近的颜色带参数

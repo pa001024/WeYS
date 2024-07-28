@@ -161,6 +161,8 @@ const cacheExchange = offlineExchange({
                                         userId
                                         createdAt
                                         updateAt
+                                        paused
+                                        online
                                         user {
                                             id
                                             name

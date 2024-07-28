@@ -226,6 +226,8 @@ useSubscription<{ updateTask: Task }>({
                 endTime
                 createdAt
                 updateAt
+                online
+                paused
                 user {
                     id
                     name
@@ -454,18 +456,16 @@ async function autoJoinGame(task: Task) {
                                 </div>
                                 <div class="flex-none flex gap-2">
                                     <Tooltip :tooltip="$t('chat.pauseTask')" side="bottom">
-                                        <div class="btn btn-sm btn-primary" @click="endTask(task)" @contextmenu.prevent="pauseTask(task)">
+                                        <div
+                                            class="btn btn-sm btn-primary"
+                                            @click="endTask(task)"
+                                            @contextmenu.prevent="task.online && pauseTask(task)"
+                                        >
                                             {{ $t("task.end") }}
                                         </div>
                                     </Tooltip>
-                                    <div
-                                        class="btn btn-sm btn-primary"
-                                        :class="{
-                                            'btn-disabled': task.paused,
-                                        }"
-                                        @click="autoJoinGame(task)"
-                                    >
-                                        {{ $t("task.join") }}
+                                    <div class="btn btn-sm btn-primary" @click="task.paused ? pauseTask(task) : autoJoinGame(task)">
+                                        {{ task.paused ? $t("task.unpause") : $t("task.join") }}
                                     </div>
                                 </div>
                             </div>

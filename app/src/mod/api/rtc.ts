@@ -100,19 +100,25 @@ export class RTCClient {
             }
         )
         onMounted(async () => {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    channelCount: { ideal: 1 },
-                    noiseSuppression: { ideal: true },
-                    echoCancellation: { ideal: true },
-                    autoGainControl: { ideal: true },
-                    sampleRate: { ideal: 48000 },
-                }, // 请求音频访问权限
-            })
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: { ideal: 1 },
+                        noiseSuppression: { ideal: true },
+                        echoCancellation: { ideal: true },
+                        autoGainControl: { ideal: true },
+                        sampleRate: { ideal: 48000 },
+                    }, // 请求音频访问权限
+                })
+            } catch {}
             this.setMicOn(false)
-            setTimeout(() => {
-                this.connect()
-            }, 100)
+            for (let i = 0; i < 10; i++) {
+                try {
+                    await this.connect()
+                    await new Promise((r) => setTimeout(r, 200))
+                    break
+                } catch {}
+            }
         })
         onUnmounted(async () => {
             this.dispose()
