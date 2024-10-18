@@ -20,3 +20,4 @@ bun.lockb
 app/.env
 *.sh
 .tauri/
+package-lock.json

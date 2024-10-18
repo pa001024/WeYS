@@ -45,9 +45,9 @@ body {
 }
 
 /* tarui v2版本会导致右上角按钮被遮挡 */
-/* [data-tauri-drag-region] {
+[data-tauri-drag-region] {
     -webkit-app-region: drag;
-} */
+}
 
 .scrollbar-hide::-webkit-scrollbar {
     color: #4de699;

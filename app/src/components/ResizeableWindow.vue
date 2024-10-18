@@ -99,7 +99,7 @@ if (env.isApp) {
 </script>
 <template>
     <!-- Root -->
-    <div class="relative w-full h-full flex overflow-hidden bg-base-100/30">
+    <div class="relative w-full h-full flex overflow-hidden bg-base-100/30 rounded-lg">
         <!-- SideBar -->
         <slot v-if="route.name !== 'sroom'" name="sidebar"></slot>
         <!-- Header -->

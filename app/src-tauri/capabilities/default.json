@@ -3,36 +3,11 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main",
-    "schat"
+    "main"
   ],
   "permissions": [
-    "path:default",
-    "event:default",
-    "window:default",
-    "app:default",
-    "image:default",
-    "resources:default",
-    "menu:default",
-    "tray:default",
+    "core:default",
     "shell:allow-open",
-    "window:allow-create",
-    "window:allow-close",
-    "window:allow-set-decorations",
-    "webview:allow-create-webview",
-    "webview:allow-create-webview-window",
-    "window:allow-set-size",
-    "window:allow-set-title",
-    "window:allow-set-fullscreen",
-    "window:allow-set-always-on-top",
-    "window:allow-start-dragging",
-    "window:allow-minimize",
-    "window:allow-maximize",
-    "window:allow-unmaximize",
-    "window:allow-set-resizable",
-    "window:allow-set-min-size",
-    "process:allow-exit",
-    "dialog:allow-open",
     {
       "identifier": "shell:allow-execute",
       "allow": [
@@ -40,24 +15,6 @@
           "name": "cmd",
           "cmd": "cmd",
           "args": true
-        }
-      ]
-    },
-    "dialog:allow-confirm",
-    "dialog:allow-message",
-    "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-write-text",
-    {
-      "identifier": "http:default",
-      "allow": [
-        {
-          "url": "https://xn--chq26veyq.icu/*"
-        },
-        {
-          "url": "https://hk4e-sdk.mihoyo.com/*"
-        },
-        {
-          "url": "https://api-takumi.mihoyo.com/*"
         }
       ]
     },
@@ -74,8 +31,6 @@
     "game:allow-get-game",
     "game:allow-set-hotkey",
     "game:allow-is-ingame",
-    "game:default",
-    "updater:default",
     "global-shortcut:default",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",

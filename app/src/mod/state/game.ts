@@ -90,6 +90,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
             if (e.payload.id !== game.launchId) return
             console.log("game input")
             game.state = "需输入密码"
+            game.deleteReg(game.selected);
         })
         await event.listen<{ id: string; success: boolean }>("game_ready", async (e) => {
             if (e.payload.id !== game.launchId) return
@@ -100,7 +101,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
             if (e.payload.id !== game.launchId) return
             if (e.payload.success) {
                 console.log("game enter (addAccountReg)")
-                if (!(await game.getCurrent())?.uid) {
+                if (!(await game.getCurrent())?.uid || game.state === "需输入密码") {
                     await game.addAccountReg()
                 }
                 if (!game.autoLoginEnable) return
@@ -163,7 +164,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
                             console.debug("opendoor subscribe", e)
                             if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
-                                await autoOpen(1, game.autoLoginPost)
+                                if (!game.autoLoginOnlyEnd) await autoOpen(1, game.autoLoginPost)
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
@@ -197,7 +198,6 @@ export const useGameStore = defineStore("game", {
             autoLoginOnlyEnd: useLocalStorage("game_auto_login_only_end", false),
             autoLoginPost: useLocalStorage("game_auto_login_post", false),
             autoLoginRoom: useLocalStorage("game_auto_login_room", "-"),
-            nextSho: useLocalStorage("game_auto_login_room", "-"),
             path: useLocalStorage("game_path", ""),
             beforeGame: useLocalStorage("game_before", ""),
             afterGame: useLocalStorage("game_after", ""),

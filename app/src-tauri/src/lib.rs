@@ -140,7 +140,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
             let window = app.get_webview_window("main").unwrap();
-            window.set_shadow(true).expect("Unsupported platform!");
+            // window.set_shadow(true).expect("Unsupported platform!");
 
             #[cfg(target_os = "macos")]
             apply_vibrancy(&window, NSVisualEffectMaterial::HudWindow, None, None)
@@ -159,7 +159,7 @@ pub fn run() {
                 use windows_sys::Win32::UI::WindowsAndMessaging::*;
                 let h_mutex =
                     unsafe { CreateMutexA(std::ptr::null_mut(), 0, "weys-mutex".as_ptr()) };
-                if h_mutex == 0 {
+                if h_mutex == std::ptr::null_mut() {
                     // Mutex already exists, app is already running.
                     unsafe {
                         CloseHandle(h_mutex);
@@ -193,23 +193,23 @@ pub fn run() {
                         }
                     });
                 };
-                if let Some(version) = System::os_version() {
-                    if version.starts_with("11") {
-                        let acrylic_available = apply_acrylic(&window, Some((0, 0, 0, 0))).is_ok();
-                        if acrylic_available {
-                            println!("Acrylic is available");
-                            set_mat_check("Acrylic");
-                        }
-                    } else if version.starts_with("10") {
-                        let blur_available = apply_blur(&window, Some((0, 0, 0, 0))).is_ok();
-                        if blur_available {
-                            println!("Blur is available");
-                            set_mat_check("Blur");
-                        }
-                    } else {
-                        set_mat_check("None");
-                    }
-                }
+                // if let Some(version) = System::os_version() {
+                //     if version.starts_with("11") {
+                //         let acrylic_available = apply_acrylic(&window, Some((0, 0, 0, 0))).is_ok();
+                //         if acrylic_available {
+                //             println!("Acrylic is available");
+                //             set_mat_check("Acrylic");
+                //         }
+                //     } else if version.starts_with("10") {
+                //         let blur_available = apply_blur(&window, Some((0, 0, 0, 0))).is_ok();
+                //         if blur_available {
+                //             println!("Blur is available");
+                //             set_mat_check("Blur");
+                //         }
+                //     } else {
+                //         set_mat_check("None");
+                //     }
+                // }
 
                 let _tray = TrayIconBuilder::new()
                     .menu(&menu)

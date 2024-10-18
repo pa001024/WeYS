@@ -192,7 +192,6 @@ if (env.isApp) {
     opacity: 0;
     transform: translateX(-2rem);
 }
-
 .slide-right-leave-to {
     opacity: 0;
     transform: translateX(2rem);

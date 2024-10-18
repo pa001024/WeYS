@@ -47,7 +47,9 @@ const scrollRef = ref<HTMLDivElement | null>(null)
 function scrollToCenter(id: number = game.selected) {
     const viewNode = scrollRef.value?.children[0]
     if (!viewNode) return
-    viewNode.children[game.accounts!.findIndex((acc) => acc.id === id)].scrollIntoView({ behavior: "smooth", block: "center" })
+    try {
+        viewNode.children[game.accounts!.findIndex((acc) => acc.id === id)].scrollIntoView({ behavior: "smooth", block: "center" })
+    } catch {}
 }
 
 async function importAccounts() {

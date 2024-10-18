@@ -71,34 +71,34 @@ async fn auto_join(uid: String) -> bool {
                 while ctl.HuColor(1332, 257, 0x333333) {
                     ctl.Click(82, 179);
                     ctl.Wheel(1);
-                    tokio::time::sleep(interval2).await;
+                    sleep(10);
                 }
                 println!("粘贴UID");
                 while elapsed <= timeout {
                     if ctl.EqColor(1332, 361, 0xFFFFFF) {
                         set_clipboard_text(uid.as_str());
-                        tokio::time::sleep(interval2).await;
+                        sleep(10);
                         elapsed += interval2;
                         ctl.Click(1249, 102); // 粘贴
                     } else {
                         break;
                     }
-                    tokio::time::sleep(interval2).await;
+                    sleep(10);
                     elapsed += interval2;
                 }
                 println!("开始搜索");
                 while elapsed <= timeout {
                     // 搜索
                     ctl.Click(1428, 102);
-                    tokio::time::sleep(interval).await;
+                    sleep(10);
                     // 点进入
                     ctl.Click(1411, 203);
-                    tokio::time::sleep(interval).await;
+                    sleep(10);
                     elapsed += interval * 2;
                 }
                 return true;
             }
-            tokio::time::sleep(interval).await;
+            sleep(100);
             elapsed += interval;
         }
     }
@@ -152,7 +152,7 @@ async fn launch_game<R: Runtime>(
         return false;
     }
     let pi = pi.unwrap();
-    println!("Process ID: {}", pi.hProcess);
+    println!("Process ID: {}", pi.hProcess as isize);
 
     // 游戏进程启动
     let _ = app.emit(
@@ -178,7 +178,7 @@ async fn launch_game<R: Runtime>(
                 if let Some(rect) = get_window_rect(hwnd) {
                     if rect.left == x && rect.top == y {
                         println!(
-                            "window_rect hwnd = {}, pos = {},{}",
+                            "window_rect hwnd = {:?}, pos = {},{}",
                             hwnd, rect.left, rect.top
                         );
                         let _ = app.emit(
@@ -219,7 +219,7 @@ async fn launch_game<R: Runtime>(
     true
 }
 
-fn unlockfps(pid: isize) -> bool {
+fn unlockfps(pid: windows_sys::Win32::Foundation::HANDLE) -> bool {
     match get_module_by_name(pid, "UnityPlayer.dll") {
         Ok(h_unity_player) => {
             match get_memory_by_pattern(
@@ -296,27 +296,35 @@ async fn auto_login<R: Runtime>(
             sleep(200);
         }
         let now = std::time::Instant::now();
-        let timeout = Duration::from_secs(30);
+        let timeout = Duration::from_secs(20);
         while now.elapsed() < timeout {
             // 循环判断登录成功
             if ctl.WaitEqColor(1489, 794, 0x222222, 1.) {
                 break;
             }
             // 登陆框灰色 说明有滑块
-            if ctl.WaitEqColor(603, 250, 0x7E7E7E, 1.) && ctl.EqColor(667, 271, 0xFFFFFF) {
+            if ctl.WaitEqColor(603, 250, 0x7E7E7E, 1.) && ctl.EqColor(731, 266, 0xFFFFFF) {
+                println!("需滑块验证");
                 // 点击此处重试
                 if ctl.EqColor(855, 503, 0x8A9DCA) || ctl.EqColor(855, 503, 0xA0B1D9) {
                     ctl.Click(869, 504);
                     sleep(1000);
                 }
-                // 判断滑块框
-                if ctl.WaitEqColor(888, 514, 0xDFE1E2, 1.) {
+                if ctl.WaitEqColor(886, 514, 0xDFE1E2, 1.) {
+                    println!("自动滑块验证");
                     sleep(300);
                     auto_slide(hwnd);
+                    sleep(500);
+                    if ctl.EqColor(603, 250, 0x7E7E7E) {
+                        println!("自动滑块失败");
+                        sleep(2000);
+                        ctl.Click(731, 564);
+                        sleep(500);
+                    }
                 }
+            } else {
+                ctl.Click(973, 580);
             }
-
-            ctl.Click(973, 580);
         }
         if now.elapsed() >= timeout {
             let _ = app.emit("game_enter", LoginPayload { id, success: false });
@@ -345,7 +353,7 @@ async fn auto_login<R: Runtime>(
                 let rst = get_uid();
                 sleep(200);
                 if !rst.uid.is_empty() {
-                    println!("成功加载");
+                    println!("成功加载(注册表)");
                     let _ = app.emit("game_enter", LoginPayload { id, success: true });
                     return;
                 }
@@ -565,7 +573,7 @@ fn is_ingame() -> bool {
     }
 }
 #[tauri::command]
-fn set_hotkey<R: Runtime>(app: AppHandle<R>, key: String) -> bool {
+fn set_hotkey<R: Runtime>(_app: AppHandle<R>, _key: String) -> bool {
     // static mut HOOKID: isize = 0;
     // if unsafe { HOOKID } != 0 {
     //     del_keyboard_hook(unsafe { HOOKID });
@@ -575,7 +583,7 @@ fn set_hotkey<R: Runtime>(app: AppHandle<R>, key: String) -> bool {
 }
 
 /// 自动验证码
-fn auto_slide(hwnd: isize) {
+fn auto_slide(hwnd: windows_sys::Win32::Foundation::HANDLE) {
     fn ease_out_quart(x: f32) -> f32 {
         1. - (1. - x).powi(4)
     }
@@ -610,6 +618,7 @@ fn auto_slide(hwnd: isize) {
     }
 
     let tx = (cap_slide(hwnd) as f32 * 1.05) as i32;
+    println!("tx: {}", tx);
     if tx > 0 {
         let ctl = GameControl::new(hwnd, false);
         ctl.SavePos();
@@ -655,7 +664,11 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::{get_process_by_name, get_regsk, get_uid};
+    use crate::services::game::auto_slide;
+
+    use super::{
+        get_process_by_name, get_regsk, get_uid, get_window_by_process_name, GAME_PROCESS,
+    };
 
     #[test]
     fn test_get_procees() {
@@ -686,4 +699,11 @@ mod tests {
     //     );
     //     println!("rst: {}", rst);
     // }
+    #[test]
+    fn test_slide() {
+        if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
+            println!("test_slide");
+            auto_slide(hwnd);
+        }
+    }
 }

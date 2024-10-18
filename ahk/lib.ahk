@@ -12,14 +12,26 @@ msgl(text, dur := 1000) {
   ToolTip text, 0, 0
   SetTimer endmsg, dur
 }
+leftClick1080(x, y, count := 1) {
+  hwnd := GetForegroundWindow()
+  WinGetClientPos(&wx, &wy, &w, &h, hwnd)
+  Click(wx + x * w / 1920, wy + y * h / 1080, count)
+}
+MM(x, y) {
+  hwnd := GetForegroundWindow()
+  WinGetClientPos(&wx, &wy, &w, &h, hwnd)
+  Click(wx + x * w / 1600, wy + y * h / 900, 0)
+}
 ;;; 鼠标左键点击 x,y坐标 为1600*900的相对坐标
 leftClick(x, y, count := 1) {
-  WinGetClientPos(&wx, &wy, &w, &h)
+  hwnd := GetForegroundWindow()
+  WinGetClientPos(&wx, &wy, &w, &h, hwnd)
   Click(wx + x * w / 1600, wy + y * h / 900, count)
 }
 ;;; 鼠标右键点击 x,y坐标 为1600*900的相对坐标
 rightClick(x, y, count := 1) {
-  WinGetClientPos(&wx, &wy, &w, &h)
+  hwnd := GetForegroundWindow()
+  WinGetClientPos(&wx, &wy, &w, &h, hwnd)
   Click(wx + x * w / 1600, wy + y * h / 900, count, "Right")
 }
 savePos(restore := false) {
@@ -84,6 +96,77 @@ setProgramVol(program, vol) {
   ; }
 }
 
+RGBToHSL(rgb) {
+  ; 将 RGB 从 0-255 转换为 0-1 范围
+  r := Float(rgb >> 16 & 255) / 255
+  g := Float(rgb >> 8 & 255) / 255
+  b := Float(rgb & 255) / 255
+
+  ; 计算最大和最小值
+  vmax := max(r, g, b)
+  vmin := min(r, g, b)
+  delta := vmax - vmin
+
+  ; 计算亮度
+  luminance := (vmax + vmin) / 2
+
+  ; 计算饱和度
+  saturation := 0
+  if (delta != 0) {
+    saturation := (luminance > 0.5) ? (delta / (2 - vmax - vmin)) : (delta / (vmax + vmin))
+  }
+
+  ; 计算色相
+  hue := 0
+  if (delta != 0) {
+    if (vmax == r) {
+      hue := (g < b) ? (60 * ((g - b) / delta + 6)) : (60 * ((g - b) / delta))
+    } else if (vmax == g) {
+      hue := 60 * ((b - r) / delta + 2)
+    } else {
+      hue := 60 * ((r - g) / delta + 4)
+    }
+  }
+
+  ; 返回 HSL 值
+  ; 注意：这里我们将 hue 和 saturation 转换为百分比形式
+  return [hue, saturation, luminance]
+}
+
+GetHSL(x, y) {
+  color := Integer(PixelGetColor(x, y)) ; 0xRRGGBB
+  return RGBToHSL(color)
+}
+
+CheckHSL(x, y, rgb) {
+  hsl := GetHSL(x, y)
+  v := RGBToHSL(rgb)
+  return abs(hsl[1] - v[1]) + abs(hsl[2] - v[2]) * 180 + abs(hsl[3] - v[3]) * 75
+}
+
+WaitHSL(x, y, rgb, t := 100, timeout := 1000, interval := 100) {
+  s := A_TickCount
+  Loop {
+    if CheckHSL(x, y, rgb) < t
+      return true
+    else
+      Sleep interval
+    if timeout > 0 and A_TickCount - s > timeout
+      return false
+  }
+}
+
+WaitNotHSL(x, y, rgb, t := 100, timeout := 1000, interval := 100) {
+  s := A_TickCount
+  Loop {
+    if !(CheckHSL(x, y, rgb) < t)
+      return true
+    else
+      Sleep interval
+    if timeout > 0 and A_TickCount - s > timeout
+      return false
+  }
+}
 
 GetColor(x, y) {
   color := PixelGetColor(x, y)
@@ -99,6 +182,18 @@ WaitColor(x, y, v, timeout := 1000, interval := 100) {
   s := A_TickCount
   Loop {
     if CheckColor(x, y, v)
+      return true
+    else
+      Sleep interval
+    if timeout > 0 and A_TickCount - s > timeout
+      return false
+  }
+}
+
+WaitNotColor(x, y, v, timeout := 1000, interval := 100) {
+  s := A_TickCount
+  Loop {
+    if !CheckColor(x, y, v)
       return true
     else
       Sleep interval

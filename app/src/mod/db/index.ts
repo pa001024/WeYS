@@ -68,6 +68,6 @@ db.version(1).stores({
     statistics: "++id, date, userid",
     devices: "++id, &uuid",
     accounts: "++id",
-    gameAccounts: "++id, hash",
+    gameAccounts: "++id, hash, lock",
     rooms: "++id, [userId+roomId]",
 })

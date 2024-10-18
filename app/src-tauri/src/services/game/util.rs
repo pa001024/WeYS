@@ -201,7 +201,7 @@ pub fn sleep(ms: u32) {
 /// 设置剪贴板文本
 pub fn set_clipboard_text(text: &str) {
     unsafe {
-        if OpenClipboard(0) == 0 {
+        if OpenClipboard(std::ptr::null_mut()) == 0 {
             println!("[set_clipboard_text] OpenClipboard failed");
             return;
         }
@@ -214,7 +214,7 @@ pub fn set_clipboard_text(text: &str) {
             if !p_global.is_null() {
                 let p_text = p_global as *mut u16;
                 std::ptr::copy_nonoverlapping(wide.as_ptr(), p_text, wide.len());
-                if SetClipboardData(13 /*CF_UNICODETEXT */, h_global as isize) == 0 {
+                if SetClipboardData(13 /*CF_UNICODETEXT */, h_global) == std::ptr::null_mut() {
                     println!("[set_clipboard_text] SetClipboardData failed");
                     GlobalFree(h_global);
                 }
@@ -442,7 +442,7 @@ pub(crate) fn get_window_by_process_name(name: &str) -> Option<HWND> {
 pub(crate) fn kill_process(pid: u32) -> Result<bool, Win32Error> {
     unsafe {
         let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
-        if handle == -1 {
+        if handle == usize::MAX as *mut c_void {
             return Err(Win32Error::Sys(windows_core::Error::from_win32()));
         }
         if TerminateProcess(handle, 0) == FALSE {
@@ -492,7 +492,7 @@ pub(crate) fn get_module_by_name(
 
         'out: for _ in 0..50 {
             let mut modules: Vec<HMODULE> = Vec::with_capacity(1024);
-            modules.resize(1024, HMODULE::default());
+            modules.resize(1024, std::ptr::null_mut());
             let mut cb_needed = 0;
 
             if TRUE
@@ -505,7 +505,7 @@ pub(crate) fn get_module_by_name(
             {
                 modules.resize(
                     cb_needed as usize / size_of::<HMODULE>(),
-                    HMODULE::default(),
+                    std::ptr::null_mut(),
                 );
                 for it in modules {
                     let mut sz_module_name = [0u8; MAX_PATH as usize];
@@ -588,7 +588,7 @@ pub(crate) fn get_memory_by_pattern(
 }
 
 lazy_static! {
-    static ref DC_CACHE: Mutex<HDC> = Mutex::new(HDC::default());
+    static ref DC_CACHE: Mutex<isize> = Mutex::new(0);
 }
 
 pub fn save_dc(hwnd: HWND) {
@@ -596,18 +596,18 @@ pub fn save_dc(hwnd: HWND) {
         // If the function succeeds, the return value is a handle to the DC for the specified window's client area.
         let hdc = GetDC(hwnd);
         let mut dc_cache = DC_CACHE.lock().unwrap();
-        ReleaseDC(hwnd, *dc_cache);
-        *dc_cache = hdc;
+        ReleaseDC(hwnd, (*dc_cache) as *mut c_void);
+        *dc_cache = hdc as isize;
     }
 }
 
 pub fn free_dc(hwnd: HWND) {
     unsafe {
         let mut dc_cache = DC_CACHE.lock().unwrap();
-        if !(*dc_cache) == 0 {
-            ReleaseDC(hwnd, *dc_cache);
+        if *dc_cache != 0 {
+            ReleaseDC(hwnd, *dc_cache as *mut c_void);
         }
-        *dc_cache = HDC::default();
+        *dc_cache = 0;
     }
 }
 
@@ -623,7 +623,7 @@ pub fn get_color(hwnd: HWND, x: i32, y: i32) -> u32 {
 pub fn get_color_batch(x: i32, y: i32) -> u32 {
     unsafe {
         let dc_cache = DC_CACHE.lock().unwrap();
-        let ret = GetPixel(*dc_cache, x, y);
+        let ret = GetPixel(*dc_cache as *mut c_void, x, y);
         ret
     }
 }
@@ -812,7 +812,7 @@ unsafe fn pattern_scan(module: *const c_void, signature: &str) -> *const c_void 
 
 pub(crate) fn move_window(hwnd: HWND, x: i32, y: i32) {
     unsafe {
-        SetWindowPos(hwnd, 0, x, y, 0, 0, SWP_NOSIZE);
+        SetWindowPos(hwnd, std::ptr::null_mut(), x, y, 0, 0, SWP_NOSIZE);
     }
 }
 
@@ -844,7 +844,7 @@ pub fn get_window_by_process(pid: u32) -> Option<HWND> {
         wi.pid = pid;
         let _ = EnumWindows(Some(enum_windows_proc), &mut wi as *const _ as LPARAM);
 
-        if wi.hwnd != 0 {
+        if wi.hwnd != std::ptr::null_mut() {
             // 检查是否找到窗口
             Some(wi.hwnd)
         } else {

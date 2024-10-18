@@ -146,12 +146,12 @@ impl GameControl {
         // self.Click(x, y);
     }
 
-    /// 基本相等的颜色
+    /// 完全相等的颜色
     pub fn EqColor(&self, x: i32, y: i32, rgb: u32) -> bool {
-        get_color(self.hwnd, x, y) == rgb
+        hsl_sim(get_color(self.hwnd, x, y), rgb) == 0.
     }
 
-    /// 基本相近的颜色
+    /// 基本相近的颜色.
     pub fn HuColor(&self, x: i32, y: i32, rgb: u32) -> bool {
         hsl_sim(get_color(self.hwnd, x, y), rgb) < 200.
     }
