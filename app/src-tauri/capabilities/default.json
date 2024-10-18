@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "schat"
   ],
   "permissions": [
     "core:default",
@@ -15,6 +16,40 @@
           "name": "cmd",
           "cmd": "cmd",
           "args": true
+        }
+      ]
+    },
+    "process:allow-exit",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-set-decorations",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-set-size",
+    "core:window:allow-set-title",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-min-size",
+    "dialog:allow-confirm",
+    "dialog:allow-message",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://xn--chq26veyq.icu/*"
+        },
+        {
+          "url": "https://hk4e-sdk.mihoyo.com/*"
+        },
+        {
+          "url": "https://api-takumi.mihoyo.com/*"
         }
       ]
     },
