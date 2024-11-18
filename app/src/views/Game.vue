@@ -189,7 +189,7 @@ function copyUID(uid?: string) {
                                 v-else
                                 type="text"
                                 disabled
-                                value="-screen-width 1280 -screen-height 720 -platform_type CLOUD_THIRD_PARTY_MOBILE"
+                                value="-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE"
                                 class="input input-bordered input-sm w-full min-w-32"
                             />
                         </div>
