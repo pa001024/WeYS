@@ -24,8 +24,8 @@ async function selectPath(key: "path" | "beforeGame" | "afterGame") {
                       { name: t("misc.all_files"), extensions: ["*"] },
                   ],
     })
-    if (result && result.path) {
-        game[key] = result.path
+    if (result) {
+        game[key] = result
     }
 }
 
