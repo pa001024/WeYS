@@ -37,6 +37,7 @@
     "core:window:allow-set-min-size",
     "dialog:allow-confirm",
     "dialog:allow-message",
+    "dialog:allow-open",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     {
