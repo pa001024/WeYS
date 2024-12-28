@@ -80,7 +80,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
                 const acc = await game.getCurrent()
                 if (acc) {
                     game.state = "开始自动登录"
-                    await autoLogin(game.launchId, acc.login, acc.pwd, game.autoLoginPost)
+                    await autoLogin(game.launchId, acc.login, acc.pwd, game.autoLoginPost, game.autoLoginCloud)
                 }
             } else {
                 game.state = "启动失败"
@@ -90,7 +90,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
             if (e.payload.id !== game.launchId) return
             console.log("game input")
             game.state = "需输入密码"
-            game.deleteReg(game.selected);
+            game.deleteReg(game.selected)
         })
         await event.listen<{ id: string; success: boolean }>("game_ready", async (e) => {
             if (e.payload.id !== game.launchId) return
@@ -108,7 +108,7 @@ if (env.isApp && getCurrentWindow().label === "main") {
                 const acc = await game.getCurrent()
                 if (acc) {
                     game.state = "开始设置世界权限"
-                    await autoSetup(game.launchId, game.autoLoginRoom !== "-", game.autoLoginPost)
+                    await autoSetup(game.launchId, game.autoLoginRoom !== "-", game.autoLoginPost, game.autoLoginCloud)
                 }
             } else {
                 game.state = "检测失败 请手动点击加号"
@@ -164,17 +164,17 @@ if (env.isApp && getCurrentWindow().label === "main") {
                             console.debug("opendoor subscribe", e)
                             if (ev.endTime || !game.autoLoginOnlyEnd) {
                                 sub.unsubscribe()
-                                if (!game.autoLoginOnlyEnd) await autoOpen(1, game.autoLoginPost)
+                                if (!game.autoLoginOnlyEnd) await autoOpen(1, game.autoLoginPost, game.autoLoginCloud)
                                 await new Promise((resolve) => setTimeout(resolve, 500))
                                 game.tryNext()
                                 // 发生变更 进行开门 但不结束等待
                             } else if (game.autoLoginOnlyEnd) {
                                 if (ev.paused === true) {
                                     game.state = "房间控制关门"
-                                    await autoOpen(3, game.autoLoginPost)
+                                    await autoOpen(3, game.autoLoginPost, game.autoLoginCloud)
                                 } else if (ev.paused === false) {
                                     game.state = "房间控制开门"
-                                    await autoOpen(1, game.autoLoginPost)
+                                    await autoOpen(1, game.autoLoginPost, game.autoLoginCloud)
                                 }
                             }
                         })
@@ -197,6 +197,7 @@ export const useGameStore = defineStore("game", {
             autoLoginTryNext: useLocalStorage("game_auto_login_try_next", true),
             autoLoginOnlyEnd: useLocalStorage("game_auto_login_only_end", false),
             autoLoginPost: useLocalStorage("game_auto_login_post", false),
+            autoLoginCloud: useLocalStorage("game_auto_login_cloud", true),
             autoLoginRoom: useLocalStorage("game_auto_login_room", "-"),
             path: useLocalStorage("game_path", ""),
             beforeGame: useLocalStorage("game_before", ""),
@@ -455,7 +456,9 @@ export const useGameStore = defineStore("game", {
                     this.launchId,
                     this.path,
                     this.autoLoginEnable
-                        ? "-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE"
+                        ? this.autoLoginCloud
+                            ? "-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE"
+                            : "-screen-width 1600 -screen-height 900"
                         : this.pathParams,
                     false
                 )

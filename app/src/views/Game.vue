@@ -189,7 +189,11 @@ function copyUID(uid?: string) {
                                 v-else
                                 type="text"
                                 disabled
-                                value="-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE"
+                                :value="
+                                    game.autoLoginCloud
+                                        ? '-screen-width 1600 -screen-height 900 -platform_type CLOUD_THIRD_PARTY_MOBILE'
+                                        : '-screen-width 1600 -screen-height 900'
+                                "
                                 class="input input-bordered input-sm w-full min-w-32"
                             />
                         </div>
@@ -226,6 +230,12 @@ function copyUID(uid?: string) {
                         <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
                             <input type="checkbox" v-model="game.autoLoginPost" class="checkbox checkbox-primary" />
                             <span class="label-text">{{ $t("game.post") }}</span>
+                        </label>
+                    </Tooltip>
+                    <Tooltip side="bottom" :tooltip="$t('game.cloudTip')">
+                        <label class="label cursor-pointer space-x-2 min-w-24 justify-start">
+                            <input type="checkbox" v-model="game.autoLoginCloud" class="checkbox checkbox-primary" />
+                            <span class="label-text">{{ $t("game.cloud") }}</span>
                         </label>
                     </Tooltip>
                     <div class="flex-1"></div>

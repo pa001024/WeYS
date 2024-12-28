@@ -1,6 +1,6 @@
 [package]
 name = "weys-app"
-version = "1.4.2"
+version = "1.4.5"
 description = "weys app"
 authors = ["weys"]
 edition = "2021"

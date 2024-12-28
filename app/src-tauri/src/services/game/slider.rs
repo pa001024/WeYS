@@ -100,36 +100,68 @@ struct Template {
 fn match_template_index(bgr: u32) -> image::DynamicImage {
     let tpls = vec![
         Template {
-            color: rgb!(52, 127, 197),
+            color: rgb!(21, 27, 49),
             picture: include_bytes!("./res/0.png"),
         },
         Template {
-            color: rgb!(238, 233, 232),
+            color: rgb!(43, 119, 190),
             picture: include_bytes!("./res/1.png"),
         },
         Template {
-            color: rgb!(70, 105, 203),
+            color: rgb!(154, 206, 220),
             picture: include_bytes!("./res/2.png"),
         },
         Template {
-            color: rgb!(142, 67, 74),
+            color: rgb!(101, 75, 52),
             picture: include_bytes!("./res/3.png"),
         },
         Template {
-            color: rgb!(190, 203, 231),
+            color: rgb!(135, 92, 74),
             picture: include_bytes!("./res/4.png"),
         },
         Template {
-            color: rgb!(7, 10, 38),
+            color: rgb!(198, 214, 234),
             picture: include_bytes!("./res/5.png"),
         },
         Template {
-            color: rgb!(1, 21, 113),
+            color: rgb!(59, 161, 75),
             picture: include_bytes!("./res/6.png"),
         },
         Template {
-            color: rgb!(162, 79, 49),
+            color: rgb!(111, 178, 94),
             picture: include_bytes!("./res/7.png"),
+        },
+        Template {
+            color: rgb!(76, 66, 120),
+            picture: include_bytes!("./res/8.png"),
+        },
+        Template {
+            color: rgb!(2, 20, 118),
+            picture: include_bytes!("./res/9.png"),
+        },
+        Template {
+            color: rgb!(53, 32, 23),
+            picture: include_bytes!("./res/10.png"),
+        },
+        Template {
+            color: rgb!(130, 81, 48),
+            picture: include_bytes!("./res/11.png"),
+        },
+        Template {
+            color: rgb!(90, 84, 102),
+            picture: include_bytes!("./res/12.png"),
+        },
+        Template {
+            color: rgb!(242, 242, 241),
+            picture: include_bytes!("./res/13.png"),
+        },
+        Template {
+            color: rgb!(34, 18, 19),
+            picture: include_bytes!("./res/14.png"),
+        },
+        Template {
+            color: rgb!(99, 103, 140),
+            picture: include_bytes!("./res/15.png"),
         },
     ];
 

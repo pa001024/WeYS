@@ -49,7 +49,9 @@
     "openschat": "打开",
     "openschatTip": "打开独立聊天窗口",
     "post": "后台",
-    "postTip": "尽可能使用后台API控制 除登录外不用将窗口切到前台"
+    "postTip": "尽可能使用后台API控制 除登录外不用将窗口切到前台",
+    "cloud": "云",
+    "cloudTip": "使用云平台界面"
   },
   "chat": {
     "title": "聊天",

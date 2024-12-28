@@ -24,23 +24,33 @@ struct LoginPayload {
 
 // 自动切世界权限
 #[tauri::command]
-async fn auto_open(state: i32, post: bool) -> bool {
+async fn auto_open(state: i32, post: bool, cloud: bool) -> bool {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
         let ctl = GameControl::new(hwnd, post);
         if !post {
             ctl.SetFocus();
         }
-        if !ctl.HuColor(526, 838, 0xECE5D8) {
-            ctl.Click(382, 52); // F2
-            ctl.WaitHuColor(526, 838, 0xECE5D8, 2.);
+        if !ctl.HuColor(
+            if cloud { 469 } else { 409 },
+            if cloud { 840 } else { 851 },
+            0xECE5D8,
+        ) {
+            // ctl.Click(382, 52); // F2
+            key_press("f2", 20);
+            ctl.WaitHuColor(
+                if cloud { 469 } else { 409 },
+                if cloud { 840 } else { 851 },
+                0xECE5D8,
+                2.,
+            );
             sleep(100);
         }
-        ctl.Click(469, 840); // 世界权限
+        ctl.Click(if cloud { 469 } else { 409 }, if cloud { 840 } else { 851 }); // 世界权限
         sleep(100);
         match state {
-            1 => ctl.Click(485, 735), // 直接加入
-            2 => ctl.Click(473, 785), // 确认后可加入
-            3 => ctl.Click(457, 686), // 无法加入
+            1 => ctl.Click(416, if cloud { 735 } else { 767 }), // 直接加入
+            2 => ctl.Click(416, if cloud { 804 } else { 805 }), // 确认后可加入
+            3 => ctl.Click(416, if cloud { 686 } else { 725 }), // 无法加入
             _ => {}
         }
         sleep(100);
@@ -249,12 +259,19 @@ async fn auto_login<R: Runtime>(
     login: String,
     pwd: String,
     post: bool,
+    cloud: bool,
 ) {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
         let ctl = GameControl::new(hwnd, post);
         // 适龄提示
         println!("自动登录");
-        if !ctl.WaitEqColor2(1489, 794, 0x222222, 0x111111, 30.) {
+        if !ctl.WaitEqColor2(
+            if cloud { 1489 } else { 1529 },
+            if cloud { 794 } else { 818 },
+            0x222222,
+            0x111111,
+            30.,
+        ) {
             println!("登录超时");
             let _ = app.emit(
                 "game_login",
@@ -267,7 +284,11 @@ async fn auto_login<R: Runtime>(
         }
         println!("登录开始");
         // 判断登陆框
-        if !ctl.EqColor(1489, 794, 0x222222) {
+        if !ctl.EqColor(
+            if cloud { 1489 } else { 1529 },
+            if cloud { 794 } else { 818 },
+            0x222222,
+        ) {
             let ctl = GameControl::new(hwnd, false);
             println!("需输入密码");
             let _ = app.emit(
@@ -288,38 +309,37 @@ async fn auto_login<R: Runtime>(
             sleep(100);
             ctl.SendText(pwd.as_str());
             sleep(300);
-            if !ctl.EqColor(580, 505, 0xDEBC60) {
-                ctl.Click(581, 514);
+            if !ctl.EqColor(580, 525, 0xDEBC60) {
+                ctl.Click(581, 526);
                 sleep(100);
             }
             ctl.Click(973, 580);
             sleep(200);
         }
         let now = std::time::Instant::now();
-        let timeout = Duration::from_secs(20);
+        let timeout = Duration::from_secs(30);
         while now.elapsed() < timeout {
             // 循环判断登录成功
-            if ctl.WaitEqColor(1489, 794, 0x222222, 1.) {
+            if ctl.WaitEqColor(
+                if cloud { 1489 } else { 1529 },
+                if cloud { 794 } else { 818 },
+                0x222222,
+                1.,
+            ) {
+                println!("登录结束");
                 break;
             }
             // 登陆框灰色 说明有滑块
-            if ctl.WaitEqColor(603, 250, 0x7E7E7E, 1.) && ctl.EqColor(731, 266, 0xFFFFFF) {
+            if ctl.WaitEqColor(603, 250, 0x666666, 1.) && ctl.EqColor(708, 317, 0xFFFFFF) {
                 println!("需滑块验证");
-                // 点击此处重试
-                if ctl.EqColor(855, 503, 0x8A9DCA) || ctl.EqColor(855, 503, 0xA0B1D9) {
-                    ctl.Click(869, 504);
-                    sleep(1000);
-                }
-                if ctl.WaitEqColor(886, 514, 0xDFE1E2, 1.) {
+                if ctl.WaitHuColor(690, 533, 0x608AFE, 1.) {
                     println!("自动滑块验证");
                     sleep(300);
                     auto_slide(hwnd);
                     sleep(500);
-                    if ctl.EqColor(603, 250, 0x7E7E7E) {
+                    if ctl.EqColor(603, 250, 0x666666) {
                         println!("自动滑块失败");
                         sleep(2000);
-                        ctl.Click(731, 564);
-                        sleep(500);
                     }
                 }
             } else {
@@ -345,7 +365,11 @@ async fn auto_login<R: Runtime>(
             let timeout = Duration::from_secs(30);
 
             while now.elapsed() < timeout {
-                if ctl.EqColor(761, 827, 0xFFFFFF) {
+                if ctl.EqColor(
+                    if cloud { 761 } else { 789 },
+                    if cloud { 827 } else { 845 },
+                    0xFFFFFF,
+                ) {
                     ctl.Click(819, 838);
                 } else if !ctl.EqColor(677, 297, 0xFFFFFF) {
                     ctl.PostClickLazy(819, 838);
@@ -359,7 +383,12 @@ async fn auto_login<R: Runtime>(
                 }
             }
         } else {
-            if ctl.WaitEqColor(761, 827, 0xFFFFFF, 20.) {
+            if ctl.WaitEqColor(
+                if cloud { 761 } else { 789 },
+                if cloud { 827 } else { 845 },
+                0xFFFFFF,
+                20.,
+            ) {
                 ctl.Click(819, 838);
                 // 等待加载完毕
                 println!("等待加载");
@@ -382,10 +411,21 @@ async fn auto_login<R: Runtime>(
 }
 
 #[tauri::command]
-async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool, post: bool) {
+async fn auto_setup<R: Runtime>(
+    app: AppHandle<R>,
+    id: String,
+    autosend: bool,
+    post: bool,
+    cloud: bool,
+) {
     if let Some(hwnd) = get_window_by_process_name(GAME_PROCESS) {
         let ctl = GameControl::new(hwnd, post);
-        ctl.WaitHuColor(72, 33, 0xE9C48F, 40.);
+        ctl.WaitHuColor(
+            if cloud { 72 } else { 44 },
+            if cloud { 33 } else { 31 },
+            if cloud { 0xE9C48F } else { 0x26425C },
+            40.,
+        );
         // ctl.focus();
         ctl.Sleep(100);
         let _ = app.emit(
@@ -395,20 +435,40 @@ async fn auto_setup<R: Runtime>(app: AppHandle<R>, id: String, autosend: bool, p
                 success: true,
             },
         );
-        if ctl.WaitEqColor(77, 49, 0xFFFFFF, 2.) // 主界面
-                            && ctl.EqColor(385, 58, 0xFFFFFF)
+        if ctl.WaitEqColor(
+            if cloud { 77 } else { 56 },
+            if cloud { 49 } else { 39 },
+            0xFFFFFF,
+            2.,
+        ) // 主界面
+            && ctl.EqColor(
+                if cloud { 385 } else { 308 },
+                if cloud { 58 } else { 49 },
+                0xFFFFFF,
+            )
         // F2为白色
         {
             println!("成功加载");
-            ctl.Click(385, 58); // 点击F2
-            if ctl.WaitHuColor(526, 838, 0xECE5D8, 2.) {
+            if cloud {
+                ctl.Click(385, 58); // 点击F2
+            } else {
+                key_press("f2", 20);
+            }
+            if ctl.WaitHuColor(
+                if cloud { 526 } else { 398 },
+                if cloud { 838 } else { 846 },
+                0xECE5D8,
+                2.,
+            ) {
                 println!("设置权限");
-                ctl.Click(469, 840); // 世界权限
+                ctl.Click(if cloud { 469 } else { 409 }, if cloud { 840 } else { 851 }); // 世界权限
                 sleep(100);
                 if autosend {
-                    ctl.Click(457, 686); // 无法加入
+                    ctl.Click(if cloud { 457 } else { 416 }, if cloud { 686 } else { 725 });
+                // 无法加入
                 } else {
-                    ctl.Click(485, 735); // 直接加入
+                    ctl.Click(if cloud { 485 } else { 405 }, if cloud { 735 } else { 767 });
+                    // 直接加入
                 }
                 sleep(100);
                 println!("登录结束");
@@ -622,7 +682,7 @@ fn auto_slide(hwnd: windows_sys::Win32::Foundation::HANDLE) {
     if tx > 0 {
         let ctl = GameControl::new(hwnd, false);
         ctl.SavePos();
-        ctl.MouseMove(719, 512);
+        ctl.MouseMove(713, 512);
         mouse_down();
         loop {
             let pos = ctl.MouseGetPos();
